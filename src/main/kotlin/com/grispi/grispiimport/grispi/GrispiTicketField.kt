@@ -16,10 +16,6 @@ class GrispiTicketField(
     val options: List<GrispiTicketFieldOption>?
 ): GrispiApiRequest {
 
-    override fun endpoint(): String {
-        return "/fields"
-    }
-
     override fun toJson(): String {
         return JsonSerializer().deep(true).serialize(this)
     }

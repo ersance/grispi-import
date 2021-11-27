@@ -34,6 +34,7 @@ open class UserRequest private constructor(
         fun fullName(fullName: String) = apply { this.fullName = fullName }
         fun role(role: Role) = apply { this.role = role.authority }
         fun tags(vararg tags: String) = apply { this.tags = tags.toSet() }
+        fun tags(tags: Set<String>) = apply { this.tags = tags }
 
         fun build(): UserRequest {
             return UserRequest(email, password, phone, fullName, role, tags)

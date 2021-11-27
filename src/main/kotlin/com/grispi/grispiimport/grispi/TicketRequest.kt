@@ -56,15 +56,29 @@ class TicketRequest private constructor(
         fun assignee(group: Group, user: User?) = apply { assignee(group.id.toString(), user?.id.toString()) }
         fun status(status: TicketStatus) = apply { fields.add(FieldFromUi_("ticket.system.status", status.name)) }
         fun tags(vararg tags: String) = apply { fields.add(FieldFromUi_("ticket.system.tags", tags.joinToString(","))) }
-        fun type(type: TicketType) = apply { fields.add(FieldFromUi_("ticket.system.type", type.name)) }
-        fun priority(priority: TicketPriority) = apply { fields.add(FieldFromUi_("ticket.system.priority", priority.name)) }
+        fun tags(tags: Set<String>) = apply { fields.add(FieldFromUi_("ticket.system.tags", tags.joinToString(","))) }
+        fun type(type: TicketType?) = apply { fields.add(FieldFromUi_("ticket.system.type", type?.name)) }
+        fun priority(priority: TicketPriority?) = apply { fields.add(FieldFromUi_("ticket.system.priority", priority?.name)) }
         fun followers(vararg followers: User_) = apply { fields.add(FieldFromUi_("ticket.system.followers", followers.joinToString(","))) }
+        fun followers(followers: Set<Long>) = apply { fields.add(FieldFromUi_("ticket.system.followers", followers.joinToString(","))) }
         fun emailCcs(vararg emailCcs: User_) = apply { fields.add(FieldFromUi_("ticket.system.email_ccs", emailCcs.joinToString(","))) }
+        fun emailCcs(emailCcs: Set<Long>) = apply { fields.add(FieldFromUi_("ticket.system.email_ccs", emailCcs.joinToString(","))) }
 
         // Custom fields
         fun customField(key: String, value: String) = apply {
             assert(!isSystemField(key)) { "This function can only be used for custom fields" }
             fields.add(FieldFromUi_(key, value))
+        }
+        fun customField(cFields: Map<Long, Any?>?) = apply {
+            cFields?.entries?.forEach { entry ->
+                run {
+                    if (entry.value is Collection<*>) {
+                        fields.add(FieldFromUi_(entry.key.toString(), (entry.value as Collection<*>).joinToString(",")))
+                    } else {
+                        fields.add(FieldFromUi_(entry.key.toString(), entry.value.toString()))
+                    }
+                }
+            }
         }
 
 //        fun customField(customFieldDefinition: FieldDefinition, value: String) = apply { customField(customFieldDefinition.key, value) }

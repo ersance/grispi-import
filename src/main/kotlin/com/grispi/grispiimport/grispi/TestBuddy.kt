@@ -13,7 +13,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 
 @Component
-class TestBuddy() {
+class TestBuddy {
 
     private val tenantId: String = DEFAULT_TEST_TENANT_ID
 
