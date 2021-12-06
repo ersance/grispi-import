@@ -8,12 +8,19 @@ class ZendeskTicketChannel {
     @JSON(name = "channel")
     val channel: String = "web"
 
-    // TODO
+    // TODO: 30.11.2021 define all channel types
     fun toGrispiChannel(): TicketChannel {
-        return when (channel) {
-            "email" -> TicketChannel.EMAIL
-            "call" -> TicketChannel.CALL
-            else -> TicketChannel.WEB
+        if (channel.startsWith("api")) {
+            return TicketChannel.CALL
+        }
+        else if (channel.startsWith("email")) {
+            return TicketChannel.EMAIL
+        }
+        else if (channel.startsWith("web")) {
+            return TicketChannel.WEB
+        }
+        else {
+            return TicketChannel.OTHER
         }
     }
 

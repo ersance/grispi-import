@@ -2,18 +2,12 @@ package com.grispi.grispiimport.zendesk
 
 import com.grispi.grispiimport.grispi.*
 import jodd.json.meta.JSON
-import org.springframework.format.annotation.DateTimeFormat
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.*
-import kotlin.reflect.jvm.internal.impl.load.kotlin.JvmType
 
 
 class ZendeskTicketField {
 
     @JSON(name = "id")
-    val id: Long? = null
+    val id: Long = -1
 
     @JSON(name = "url")
     val url: String? = null
@@ -55,24 +49,16 @@ class ZendeskTicketField {
     val rawTitleInPortal: String? = null
 
     @JSON(name = "visible_in_portal")
-    val visibleInPortal: Boolean? = null
+    val visibleInPortal: Boolean = false
 
     @JSON(name = "editable_in_portal")
-    val editableInPortal: Boolean? = null
+    val editableInPortal: Boolean = false
 
     @JSON(name = "required_in_portal")
     val requiredInPortal: Boolean = false
 
     @JSON(name = "tag")
     val tag: String? = null
-
-//    @JSON(name = "created_at")
-//    @DateTimeFormat(pattern = "yyyy-MM-dd'T'hh:mm:ssZ")
-//    val createdAt: Date? = null
-//
-//    @JSON(name = "updated_at")
-//    @DateTimeFormat(pattern = "yyyy-MM-dd'T'hh:mm:ssZ")
-//    val updatedAt: Date? = null
 
     @JSON(name = "removable")
     val removable: Boolean? = null
@@ -89,35 +75,50 @@ class ZendeskTicketField {
     @JSON(name = "sub_type_id")
     val subTypeId: Long? = null
 
-    fun toGrispiTicketField(): GrispiTicketField {
-        return GrispiTicketField.Builder()
-            .key(id.toString())
+    fun toGrispiTicketFieldRequest(): GrispiTicketFieldRequest {
+        val permission = mapPermission()
+        return GrispiTicketFieldRequest.Builder()
+            .key("tiz.$id")
             .name(title.toString())
             .type(mapType())
-            .titleForAgents(rawTitle.toString())
-            .titleForEndUsers(title.toString())
+            .titleForAgents(title.toString())
+            .titleForEndUsers(if (permission.isEndUserVisible()) titleInPortal.toString() else "")
             .descriptionForAgents(agentDescription.toString())
-            .descriptionForEndUsers(description.toString())
+            .descriptionForEndUsers(if (permission.isEndUserVisible()) description.toString() else "")
             .required(mapRequired())
-            .permission(mapPermission())
+            .permission(permission)
             .attributes(mapAttributes())
             .options(mapOptions())
             .build()
     }
 
-    // TODO
-    private fun mapAttributes(): List<String>? {
-        return listOf("ALLOW_NEW_VALUES")
+    companion object {
+        val SYSTEM_FIELDS: Set<String> = setOf("subject", "description", "status", "tickettype", "group", "priority", "assignee")
     }
 
-    // TODO:
+    private fun mapAttributes(): List<String> {
+        return emptyList()
+    }
+
     private fun mapPermission(): FieldPermissions {
-        return FieldPermissions.EDITABLE_BY_END_USERS
+        return if (editableInPortal) {
+            FieldPermissions.EDITABLE_BY_END_USERS
+        } else if (visibleInPortal) {
+            FieldPermissions.READONLY_FOR_END_USERS
+        } else {
+            FieldPermissions.AGENT_ONLY
+        }
     }
 
     private fun mapOptions(): List<GrispiTicketFieldOption>? {
+
+        val type = mapType()
+        if (!FieldType.TYPES_THAT_ALLOW_OPTIONS.contains(type)) {
+            return null;
+        }
+
         if (customFieldOptions == null || customFieldOptions.isEmpty()) {
-            return null
+            return emptyList()
         }
 
         val gOptions: MutableList<GrispiTicketFieldOption>? = mutableListOf()
@@ -132,7 +133,9 @@ class ZendeskTicketField {
         return when (type) {
             "integer" -> FieldType.NUMBER_INTEGER
             "decimal" -> FieldType.NUMBER_DECIMAL
-            "tagger" -> FieldType.MULTI_SELECT
+            "tagger" -> FieldType.SELECT
+            "multiselect" -> FieldType.MULTI_SELECT
+            "date" -> FieldType.DATE
             else -> FieldType.TEXT
         }
     }

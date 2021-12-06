@@ -1,5 +1,5 @@
 package com.grispi.grispiimport.grispi
 
 enum class TicketChannel {
-    WEB, EMAIL, CALL
+    WEB, EMAIL, CALL, OTHER
 }

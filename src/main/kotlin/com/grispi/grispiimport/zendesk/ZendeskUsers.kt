@@ -5,6 +5,6 @@ import jodd.json.meta.JSON
 class ZendeskUsers {
 
     @JSON(name = "users")
-    val users: List<ZendeskUser>? = emptyList()
+    val users: List<ZendeskUser> = emptyList()
 
 }

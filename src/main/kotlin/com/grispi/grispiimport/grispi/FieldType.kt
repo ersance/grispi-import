@@ -27,5 +27,11 @@ enum class FieldType(val htmlType: String, val javaType: Class<*>) {
 
     USER("user", User::class.java),
 
-    MULTI_USER("multi-user", LinkedHashSet::class.java)
+    MULTI_USER("multi-user", LinkedHashSet::class.java);
+
+    companion object {
+        val TYPES_THAT_ALLOW_OPTIONS: Set<FieldType> = setOf(MULTI_SELECT, SELECT)
+        val TYPES_THAT_ALLOW_NEW_VALUES: Set<FieldType> = setOf(USER, MULTI_USER, TAG, SELECT, MULTI_SELECT)
+    }
+
 }

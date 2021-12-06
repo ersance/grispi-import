@@ -1,7 +1,11 @@
 package com.grispi.grispiimport.grispi
 
-interface GrispiApiRequest {
+import jodd.json.JsonSerializer
 
-    fun toJson(): String
+abstract class GrispiApiRequest {
+
+    fun toJson(): String {
+        return JsonSerializer().deep(true).serialize(this)
+    }
 
 }

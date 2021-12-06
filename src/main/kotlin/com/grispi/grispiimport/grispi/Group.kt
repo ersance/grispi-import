@@ -1,5 +1,7 @@
 package com.grispi.grispiimport.grispi
 
-class Group(val id: Long, val name: String, val users: HashSet<User>) {
-
+class Group {
+    val id: Long = -1
+    val name: String? = null
+    val users: Set<User> = emptySet()
 }

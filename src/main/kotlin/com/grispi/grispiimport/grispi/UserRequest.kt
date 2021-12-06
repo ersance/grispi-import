@@ -14,11 +14,7 @@ open class UserRequest private constructor(
     val fullName: String?,
     val role: String?,
     val tags: Set<String>?
-): GrispiApiRequest {
-
-    override fun toJson(): String {
-        return JsonSerializer().deep(true).serialize(this)
-    }
+): GrispiApiRequest() {
 
     class Builder {
         private var email: String? = null
@@ -26,15 +22,15 @@ open class UserRequest private constructor(
         private var phone: String? = null
         private var fullName: String? = null
         private var role: String? = null
-        private var tags: Set<String>? = null
+        private var tags: MutableSet<String> = mutableSetOf()
 
-        fun email(email: String) = apply { this.email = email }
+        fun email(email: String?) = apply { this.email = email }
         fun password(password: String) = apply { this.password = password }
-        fun phone(phone: String) = apply { this.phone = phone }
+        fun phone(phone: String?) = apply { this.phone = phone }
         fun fullName(fullName: String) = apply { this.fullName = fullName }
         fun role(role: Role) = apply { this.role = role.authority }
-        fun tags(vararg tags: String) = apply { this.tags = tags.toSet() }
-        fun tags(tags: Set<String>) = apply { this.tags = tags }
+        fun tags(vararg tags: String) = apply { this.tags.addAll(tags.toSet()) }
+        fun tags(tags: Set<String>) = apply { this.tags.addAll(tags) }
 
         fun build(): UserRequest {
             return UserRequest(email, password, phone, fullName, role, tags)

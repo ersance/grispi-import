@@ -8,7 +8,7 @@ import jodd.json.meta.JSON
 class ZendeskUser {
 
     @JSON(name = "id")
-    val id: Long? = null
+    val id: Long = -1
 
     @JSON(name = "name")
     val name: String? = null
@@ -23,16 +23,18 @@ class ZendeskUser {
     val role: String? = null
 
     @JSON(name = "tags")
-    val tags: Set<String> = emptySet()
+    val tags: MutableSet<String> = mutableSetOf()
 
+    // TODO: 30.11.2021 validate phone number and send null if invalid
     fun toGrispiUserRequest(): UserRequest {
         return UserRequest.Builder()
-            .email(email.toString())
+            .email(email ?: generateEmail())
             .password(User.NO_PASSWORD)
             .fullName(name.toString())
-            .phone(phone.toString())
+            .phone(if (PhoneNumberValidator.isValid(phone.toString())) phone else "null")
             .role(mapRole())
             .tags(tags)
+            .tags("zendesk-import")
             .build()
     }
 
@@ -41,6 +43,14 @@ class ZendeskUser {
             "agent" -> Role.AGENT
             "admin" -> Role.ADMIN
             else -> Role.END_USER
+        }
+    }
+
+    private fun generateEmail(): String? {
+        return if (phone != null) {
+            "${phone}@example.com"
+        } else {
+            "${System.currentTimeMillis()}@example.com" // TODO
         }
     }
 

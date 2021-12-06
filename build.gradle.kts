@@ -21,6 +21,7 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jodd:jodd-json:6.0.3")
+	implementation("com.googlecode.libphonenumber:libphonenumber:8.12.25")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	implementation("org.jodd:jodd-http:6.0.6")
 }

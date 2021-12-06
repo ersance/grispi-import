@@ -13,9 +13,10 @@ class ZendeskApi {
 
     companion object {
         const val HOST: String = "zendesk.com/api/v2"
-        // "https://" + subdomain + ".zendesk.com/api/v2" + getEndpoint())
 
         const val CUSTOM_FIELD_ENDPOINT: String = "/ticket_fields"
+        const val ORGANIZATIONS_ENDPOINT: String = "/organizations"
+        const val GROUPS_ENDPOINT: String = "/groups"
         const val USERS_ENDPOINT: String = "/users"
         const val TICKETS_ENDPOINT: String = "/tickets"
     }
@@ -30,6 +31,14 @@ class ZendeskApi {
 
     fun getTickets(apiCredentials: ZendeskApiCredentials): HttpResponse {
         return get(TICKETS_ENDPOINT, apiCredentials)
+    }
+
+    fun getOrganizations(apiCredentials: ZendeskApiCredentials): HttpResponse {
+        return get(ORGANIZATIONS_ENDPOINT, apiCredentials)
+    }
+
+    fun getGroups(apiCredentials: ZendeskApiCredentials): HttpResponse {
+        return get(GROUPS_ENDPOINT, apiCredentials)
     }
 
     private fun get(endpoint: String, apiCredentials: ZendeskApiCredentials): HttpResponse {

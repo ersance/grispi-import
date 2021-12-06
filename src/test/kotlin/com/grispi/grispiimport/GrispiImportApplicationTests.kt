@@ -2,7 +2,6 @@ package com.grispi.grispiimport
 
 import com.grispi.grispiimport.grispi.*
 import jodd.http.HttpRequest
-import jodd.json.JsonSerializer
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -15,7 +14,7 @@ class GrispiImportApplicationTests(@Autowired val testBuddy: TestBuddy) {
 
 	@Test
 	fun createCustomFields() {
-		val grispiTicketField = GrispiTicketField.Builder()
+		val grispiTicketFieldRequest = GrispiTicketFieldRequest.Builder()
 			.key("ticket.custom.a_multi_sel")
 			.name("A multi sel")
 			.type(FieldType.MULTI_SELECT)
@@ -31,7 +30,7 @@ class GrispiImportApplicationTests(@Autowired val testBuddy: TestBuddy) {
 
 		val httpRequest = HttpRequest
 			.post("http://grispi.com:8080/fields")
-			.body(grispiTicketField.toJson())
+			.body(grispiTicketFieldRequest.toJson())
 			.defaultHeaders(testBuddy)
 
 		val httpResponse = httpRequest.send()

@@ -2,6 +2,7 @@ package com.grispi.grispiimport.grispi
 
 import jodd.http.HttpRequest
 import jodd.http.HttpResponse
+import jodd.http.HttpStatus
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -14,32 +15,61 @@ class GrispiApi {
         const val HOST: String = "http://grispi.com:8080"
         const val TENANT_ID_HEADER_NAME: String = "tenantId"
 
-        const val CUSTOM_FIELD_ENDPOINT: String = "/fields"
-        const val ADMIN_ENDPOINT: String = "/admins"
-        const val END_USER_ENDPOINT: String = "/users"
-        const val AGENT_ENDPOINT: String = "/agents"
-        const val TICKET_ENDPOINT: String = "/tickets"
+        const val ORGANIZATIONS_ENDPOINT: String = "/import/organizations"
+        const val GROUPS_ENDPOINT: String = "/import/groups"
+        const val CUSTOM_FIELD_ENDPOINT: String = "/import/custom-fields"
+        const val USER_ENDPOINT: String = "/import/users"
+        const val TICKET_ENDPOINT: String = "/import/tickets"
     }
 
-    fun createCustomField(ticketField: GrispiTicketField, apiCredentials: GrispiApiCredentials): HttpResponse {
+    fun createOrganization(grispiOrganizationRequest: GrispiOrganizationRequest, grispiApiCredentials: GrispiApiCredentials): HttpResponse {
+        val httpResponse = post(ORGANIZATIONS_ENDPOINT, grispiOrganizationRequest.toJson(), grispiApiCredentials)
 
-        return post(CUSTOM_FIELD_ENDPOINT, ticketField.toJson(), apiCredentials)
+        if (!httpResponse.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+            throw GrispiApiException(httpResponse.statusCode(), httpResponse.bodyText())
+        }
+
+        return httpResponse
+    }
+
+    fun createGroup(grispiGroupRequest: GrispiGroupRequest, grispiApiCredentials: GrispiApiCredentials): HttpResponse {
+        val httpResponse = post(GROUPS_ENDPOINT, grispiGroupRequest.toJson(), grispiApiCredentials)
+
+        if (!httpResponse.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+            throw GrispiApiException(httpResponse.statusCode(), httpResponse.bodyText())
+        }
+
+        return httpResponse
+    }
+
+    fun createCustomField(grispiTicketFieldRequest: GrispiTicketFieldRequest, apiCredentials: GrispiApiCredentials): HttpResponse {
+        val httpResponse = post(CUSTOM_FIELD_ENDPOINT, grispiTicketFieldRequest.toJson(), apiCredentials)
+
+        if (!httpResponse.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+            throw GrispiApiException(httpResponse.statusCode(), httpResponse.bodyText())
+        }
+
+        return httpResponse
     }
 
     fun createUser(userRequest: UserRequest, apiCredentials: GrispiApiCredentials): HttpResponse {
+        val httpResponse = post(USER_ENDPOINT, userRequest.toJson(), apiCredentials)
 
-        val path = when(userRequest.role) {
-            Role.END_USER.toString() -> END_USER_ENDPOINT
-            Role.AGENT.toString() -> AGENT_ENDPOINT
-            Role.ADMIN.toString() -> ADMIN_ENDPOINT
-            else -> throw IllegalStateException("'${userRequest.role}' is invalid")
+        if (!httpResponse.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+            throw GrispiApiException(httpResponse.statusCode(), httpResponse.bodyText())
         }
 
-        return post(path, userRequest.toJson(), apiCredentials)
+        return httpResponse
     }
 
     fun createTicket(ticketRequest: TicketRequest, apiCredentials: GrispiApiCredentials): HttpResponse {
-        return post(TICKET_ENDPOINT, ticketRequest.toJson(), apiCredentials)
+        val httpResponse = post(TICKET_ENDPOINT, ticketRequest.toJson(), apiCredentials)
+
+        if (!httpResponse.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+            throw GrispiApiException(httpResponse.statusCode(), httpResponse.bodyText())
+        }
+
+        return httpResponse
     }
 
     private fun post(endpoint: String, requestBody: String, apiCredentials: GrispiApiCredentials): HttpResponse {
@@ -53,3 +83,8 @@ class GrispiApi {
     }
 
 }
+
+class GrispiApiException(
+    val statusCode: Int? = null,
+    val exceptionMessage: String? = null
+) : RuntimeException()
