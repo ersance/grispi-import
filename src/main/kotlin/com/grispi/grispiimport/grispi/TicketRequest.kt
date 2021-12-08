@@ -26,6 +26,11 @@ class TicketRequest private constructor(
         return JsonSerializer().deep(true).serialize(this)
     }
 
+    override fun toString(): String {
+        return "TicketRequest(fields=$fields)"
+    }
+
+
     data class User_(val id: String?, val email: String, val phoneNumber: String?) {
         override fun toString(): String {
             return "${id}:${email}:${phoneNumber}"
@@ -108,7 +113,10 @@ class TicketRequest private constructor(
             val ticketRequest = build()
             return ticketRequest.toJson()
         }
+
     }
+
+
 
     // TODO: 29.11.2021 create zendesk id custom field
     // TODO: 29.11.2021 add zendesk import tag

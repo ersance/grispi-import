@@ -22,11 +22,12 @@ class GroupImportService(
         const val RESOURCE_NAME = "group"
     }
 
-    fun import(zendeskImportRequest: ZendeskImportRequest) {
+    fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
         val groups = zendeskApi.getGroups(zendeskImportRequest.zendeskApiCredentials)
         val zendeskGroups = JsonParser().parse(groups.bodyRaw(), ZendeskGroups::class.java)
 
-        importLogDao.infoLog(RESOURCE_NAME, "${zendeskGroups.groups.count()} groups found", null)
+        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskGroups.groups.count()} groups found", null)
+        println("ticket import process is started for ${zendeskGroups.groups} tickets")
 
         for (zendeskGroup in zendeskGroups.groups) {
             try {
@@ -35,15 +36,17 @@ class GroupImportService(
                     zendeskImportRequest.grispiApiCredentials
                 )
                 val createdGroupId = JsonParser().parse(createGroupResponse.bodyRaw(), Long::class.java)
-                zendeskMappingDao.addGroupMapping(zendeskGroup.id, createdGroupId)
+                zendeskMappingDao.addGroupMapping(operationId, zendeskGroup.id, createdGroupId)
 
-                importLogDao.successLog(RESOURCE_NAME, "{${zendeskGroup.name}} created successfully", null)
+                zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "{${zendeskGroup.name}} created successfully", null)
             } catch (exception: GrispiApiException) {
-                importLogDao.errorLog(RESOURCE_NAME,
+                zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
                     "{${zendeskGroup.name} with id: ${zendeskGroup.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
                     null)
             }
         }
+
+        println("group import process is done")
     }
 
 }

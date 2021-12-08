@@ -7,4 +7,7 @@ class ZendeskTickets {
     @JSON(name = "tickets")
     val tickets: List<ZendeskTicket> = emptyList()
 
+    @JSON(name = "count")
+    val count: Int = 0
+
 }

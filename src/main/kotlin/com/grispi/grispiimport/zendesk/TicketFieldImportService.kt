@@ -21,7 +21,7 @@ class TicketFieldImportService(
         const val RESOURCE_NAME = "ticket field"
     }
 
-    fun import(zendeskImportRequest: ZendeskImportRequest) {
+    fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
         val ticketFields = zendeskApi.getTicketFields(zendeskImportRequest.zendeskApiCredentials)
         val zendeskTicketFields = JsonParser().parse(ticketFields.bodyRaw(), ZendeskTicketFields::class.java)
 
@@ -29,7 +29,8 @@ class TicketFieldImportService(
             .filter { ticketField -> !ZendeskTicketField.SYSTEM_FIELDS.contains(ticketField.type) }
             ?.collect(Collectors.toList())
 
-        importLogDao.infoLog(RESOURCE_NAME, "${filteredTickets?.count()} ticket fields found", null)
+        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${filteredTickets?.count()} ticket fields found", null)
+        println("ticket field import process is started for ${filteredTickets?.count()} item")
 
         if (filteredTickets != null) {
             for (zendeskTicketField in filteredTickets) {
@@ -39,16 +40,19 @@ class TicketFieldImportService(
                         zendeskImportRequest.grispiApiCredentials
                     )
                     val createdCustomFieldId = JsonParser().parse(createCustomFieldResponse.bodyRaw(), Long::class.java)
-                    zendeskMappingDao.addCustomFieldMapping(zendeskTicketField.id, createdCustomFieldId)
 
-                    importLogDao.successLog(RESOURCE_NAME, "{${zendeskTicketField.title}} created successfully", null)
+                    zendeskMappingDao.addCustomFieldMapping(operationId, zendeskTicketField.id, createdCustomFieldId)
+
+                    zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "{${zendeskTicketField.title}} created successfully", null)
                 } catch (exception: GrispiApiException) {
-                    importLogDao.errorLog(RESOURCE_NAME,
+                    zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
                         "{${zendeskTicketField.title}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
                         null)
                 }
             }
         }
+
+        println("ticket fields import process is done")
     }
 
 }

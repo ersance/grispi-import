@@ -21,11 +21,12 @@ class OrganizationImportService(
         const val RESOURCE_NAME = "organization"
     }
 
-    fun import(zendeskImportRequest: ZendeskImportRequest) {
+    fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
         val organizations = zendeskApi.getOrganizations(zendeskImportRequest.zendeskApiCredentials)
         val zendeskOrganizations = JsonParser().parse(organizations.bodyRaw(), ZendeskOrganizations::class.java)
 
-        importLogDao.infoLog(RESOURCE_NAME, "${zendeskOrganizations.organizations.count()} organizations found", null)
+        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskOrganizations.organizations.count()} organizations found", null)
+        println("organization import process is started for ${zendeskOrganizations.organizations} items")
 
         for (zendeskOrganization in zendeskOrganizations.organizations) {
             try {
@@ -34,24 +35,25 @@ class OrganizationImportService(
                     zendeskImportRequest.grispiApiCredentials
                 )
                 val createdOrganizationId = JsonParser().parse(createOrganizationResponse.bodyRaw(), Long::class.java)
-                zendeskMappingDao.addOrganizationMapping(zendeskOrganization.id, createdOrganizationId)
+                zendeskMappingDao.addOrganizationMapping(operationId, zendeskOrganization.id, createdOrganizationId)
 
-                importLogDao.successLog(RESOURCE_NAME, "{${zendeskOrganization.name}} created successfully", null)
+                zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "{${zendeskOrganization.name}} created successfully", null)
             } catch (exception: RuntimeException) {
                 when (exception) {
                     is GrispiApiException -> {
-                        importLogDao.errorLog(RESOURCE_NAME,
+                        zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
                             "{${zendeskOrganization.name} with id: ${zendeskOrganization.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
                             null)
                     }
                     else -> {
-                        importLogDao.errorLog(TicketImportService.RESOURCE_NAME,
+                        zendeskMappingDao.errorLog(operationId, TicketImportService.RESOURCE_NAME,
                             "{${zendeskOrganization.name} with id: ${zendeskOrganization.id}} couldn't be imported. ${exception.message}",
                             null)
                     }
                 }
             }
         }
+        println("organization import process is done")
     }
 
 }

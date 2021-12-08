@@ -57,28 +57,28 @@ class GrispiImportApplicationTests(@Autowired val testBuddy: TestBuddy) {
 		assertEquals(201, httpResponse.statusCode())
 	}
 
-	@Test
-	fun createTicket() {
-		val userId = "1"
-
-		val request = TicketRequest.Builder()
-			.assignee(TestBuddy.DEFAULT_GROUP_ID.toString(), userId)
-			.subject("Yalandan ticket")
-			.comment(TicketRequest.Comment_("verin parami diyor", true, TicketRequest.User_(userId, "tokatci@tokat.com", "+905551231212")))
-			.status(TicketStatus.NEW)
-			.channel(TicketChannel.WEB)
-			.customField("ticket.custom.a_multi_select", "select yaziyor ama text")
-			.build()
-
-		assertEquals(TicketChannel.WEB, request.channel)
-
-		val httpRequest = HttpRequest.post("http://grispi.com:8080/tickets?ui=true")
-			.bodyText(request.toJson(), MediaType.APPLICATION_JSON_VALUE)
-			.defaultHeaders(testBuddy)
-
-		val httpResponse = httpRequest.send()
-
-		assertEquals(201, httpResponse.statusCode())
-	}
+//	@Test
+//	fun createTicket() {
+//		val userId = "1"
+//
+//		val request = TicketRequest.Builder()
+//			.assignee(TestBuddy.DEFAULT_GROUP_ID.toString(), userId)
+//			.subject("Yalandan ticket")
+//			.comment(TicketRequest.Comment_("verin parami diyor", true, TicketRequest.User_(userId, "tokatci@tokat.com", "+905551231212")))
+//			.status(TicketStatus.NEW)
+//			.channel(TicketChannel.WEB)
+//			.customField("ticket.custom.a_multi_select", "select yaziyor ama text")
+//			.build()
+//
+//		assertEquals(TicketChannel.WEB, request.channel)
+//
+//		val httpRequest = HttpRequest.post("http://grispi.com:8080/tickets?ui=true")
+//			.bodyText(request.toJson(), MediaType.APPLICATION_JSON_VALUE)
+//			.defaultHeaders(testBuddy)
+//
+//		val httpResponse = httpRequest.send()
+//
+//		assertEquals(201, httpResponse.statusCode())
+//	}
 
 }

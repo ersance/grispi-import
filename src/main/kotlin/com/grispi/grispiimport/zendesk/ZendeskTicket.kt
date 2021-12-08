@@ -9,11 +9,12 @@ import java.lang.IllegalArgumentException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.stream.Collectors
+import kotlin.reflect.KFunction2
 
 class ZendeskTicket {
 
     @JSON(name = "id")
-    val id: Long? = null
+    val id: Long = -1
 
     @JSON(name = "via")
     val channel: ZendeskTicketChannel = ZendeskTicketChannel()
@@ -82,23 +83,24 @@ class ZendeskTicket {
     // TODO: 27.11.2021 comment - creator(email)
     // TODO: 30.11.2021 Creator & requester cannot be null and the users for them should be imported
     fun toTicketRequest(
-        getGrispiUserId: (Long) -> Long?,
-        getGrispiGroupId: (Long) -> Long?
+        operationId: String,
+        getGrispiUserId: KFunction2<String, Long, Long>,
+        getGrispiGroupId: KFunction2<String, Long, Long>
     ): TicketRequest {
 
-        val grispiAssigneeId = if (assigneeId != null) getGrispiUserId.invoke(assigneeId) else null
+        val grispiAssigneeId = if (assigneeId != null) getGrispiUserId.invoke(operationId, assigneeId) else null
         val grispiFollowerIds = mutableSetOf<Long>()
         if (followerIds.isNotEmpty()) {
-            followerIds.stream().map { fId -> getGrispiUserId.invoke(fId) }.collect(Collectors.toCollection { grispiFollowerIds })
+            followerIds.stream().map { fId -> getGrispiUserId.invoke(operationId, fId) }.collect(Collectors.toCollection { grispiFollowerIds })
         }
         val grispiEmailCcIds = mutableSetOf<Long>()
         if (emailCcIds.isNotEmpty()) {
-            emailCcIds.stream().map { fId -> getGrispiUserId.invoke(fId) }.collect(Collectors.toCollection { grispiEmailCcIds })
+            emailCcIds.stream().map { fId -> getGrispiUserId.invoke(operationId, fId) }.collect(Collectors.toCollection { grispiEmailCcIds })
         }
 
-        val grispiGroupId = if (groupId != null) getGrispiGroupId(groupId).toString() else null
-        val grispiCreatorId = getGrispiUserId(submitterId).toString()
-        val grispiRequesterId = getGrispiUserId(requesterId).toString()
+        val grispiGroupId = if (groupId != null) getGrispiGroupId(operationId, groupId).toString() else null
+        val grispiCreatorId = getGrispiUserId(operationId, submitterId).toString()
+        val grispiRequesterId = getGrispiUserId(operationId, requesterId).toString()
 
         return TicketRequest.Builder()
             .channel(channel.toGrispiChannel())
@@ -151,5 +153,10 @@ class ZendeskTicket {
             else -> throw IllegalArgumentException("Unexpected zendesk ticket priority: '${priority}'")
         }
     }
+
+    override fun toString(): String {
+        return "ZendeskTicket(id=$id, subject=$subject, createdAt=$createdAt)"
+    }
+
 
 }

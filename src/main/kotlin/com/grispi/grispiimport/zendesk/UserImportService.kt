@@ -19,11 +19,12 @@ class UserImportService(
         const val RESOURCE_NAME = "user"
     }
 
-    fun import(zendeskImportRequest: ZendeskImportRequest) {
+    fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
         val users = zendeskApi.getUsers(zendeskImportRequest.zendeskApiCredentials)
         val zendeskUsers = JsonParser().parse(users.bodyRaw(), ZendeskUsers::class.java)
 
-        importLogDao.infoLog(RESOURCE_NAME, "${zendeskUsers.users.count()} users found", null)
+        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskUsers.users.count()} users found", null)
+        println("user import process is started for ${zendeskUsers.users.count()} users")
 
         for (zendeskUser in zendeskUsers.users) {
             try {
@@ -32,15 +33,17 @@ class UserImportService(
                     zendeskImportRequest.grispiApiCredentials
                 )
                 val createdUserId = JsonParser().parse(createUserResponse.bodyRaw(), Long::class.java)
-                zendeskMappingDao.addUserMapping(zendeskUser.id, createdUserId)
+                zendeskMappingDao.addUserMapping(operationId, zendeskUser.id, createdUserId)
 
-                importLogDao.successLog(RESOURCE_NAME, "{${zendeskUser.name}} created successfully", null)
+                zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "{${zendeskUser.name}} created successfully", null)
             } catch (exception: GrispiApiException) {
-                importLogDao.errorLog(RESOURCE_NAME,
+                zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
                     "{${zendeskUser.name} with id: ${zendeskUser.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
                     null)
             }
         }
+
+        println("user import process is done")
     }
 
 }

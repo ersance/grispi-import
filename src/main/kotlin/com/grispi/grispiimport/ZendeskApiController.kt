@@ -1,18 +1,19 @@
 package com.grispi.grispiimport
 
+import com.grispi.grispiimport.common.ImportLog
 import com.grispi.grispiimport.grispi.*
 import com.grispi.grispiimport.zendesk.*
-import jodd.json.JsonException
+import jodd.http.HttpRequest
 import jodd.json.JsonParser
-import jodd.json.JsonSerializer
 import jodd.json.ValueConverter
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.Instant
-import java.time.LocalDateTime
 import java.util.stream.Collectors
 
 
@@ -21,6 +22,7 @@ class ZendeskApiController(
   @Autowired val zendeskApi: ZendeskApi,
   @Autowired val grispiApi: GrispiApi,
   @Autowired val zendeskMappingDao: ZendeskMappingDao,
+  @Autowired val logTemplate: RedisTemplate<String, ImportLog>,
 ) {
 
   companion object {
@@ -64,26 +66,26 @@ class ZendeskApiController(
 
     val zendeskUsers = JsonParser().parse(users.bodyRaw(), ZendeskUsers::class.java)
 
-    val userRequests = zendeskUsers.users?.stream()?.map { user -> user.toGrispiUserRequest() }?.collect(Collectors.toList())
+    val userRequests = zendeskUsers.users.stream().map { user -> user.toGrispiUserRequest() }?.collect(Collectors.toList())
 
     return zendeskUsers
   }
 
-  @GetMapping("/tickets")
-  fun tickets(): ZendeskTickets? {
-    val tickets = zendeskApi.getTickets(apiCredentials)
-
-    val dateFormat: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
-    val valueConverter: ValueConverter<String, Instant?> = ValueConverter { source -> dateFormat.parse(source).toInstant() }
-
-    val zendeskTickets = JsonParser().withValueConverter("tickets.values.createdAt", valueConverter).parse(tickets.bodyRaw(), ZendeskTickets::class.java)
+//  @GetMapping("/tickets")
+//  fun tickets(): ZendeskTickets? {
+//    val tickets = zendeskApi.getTickets(apiCredentials)
+//
+//    val dateFormat: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
+//    val valueConverter: ValueConverter<String, Instant?> = ValueConverter { source -> dateFormat.parse(source).toInstant() }
+//
+//    val zendeskTickets = JsonParser().withValueConverter("tickets.values.createdAt", valueConverter).parse(tickets.bodyRaw(), ZendeskTickets::class.java)
 
 //    val ticketRequests = zendeskTickets.tickets?.stream()?.map {
 //        ticket -> ticket.toTicketRequest(zendeskMappingDao::getUserId, zendeskMappingDao::getGroupId)
 //    }?.collect(Collectors.toList())
-
-    return zendeskTickets
-  }
+//
+//    return zendeskTickets
+//  }
 
   @GetMapping("/date")
   fun dateTest(): Instant? {
@@ -99,6 +101,16 @@ class ZendeskApiController(
     val instant = valueConverter.convert(date)
 
     return instant
+  }
+
+  @GetMapping("/getir")
+  fun getir(): MutableList<ImportLog>? {
+    return logTemplate.opsForList().range("a77440e8-0952-4910-b0f3-c2b1e8341b3c_success_logs",0, 10000)
+  }
+
+  @GetMapping("/test")
+  fun test(): ResponseEntity<String> {
+    return ResponseEntity.ok("test")
   }
 
 }

@@ -1,47 +1,114 @@
 package com.grispi.grispiimport.zendesk
 
+import com.grispi.grispiimport.common.*
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
+import org.springframework.context.annotation.ScopedProxyMode
+import org.springframework.data.annotation.Immutable
+import org.springframework.data.redis.core.ListOperations
+import org.springframework.data.redis.core.RedisTemplate
+import org.springframework.data.redis.core.ValueOperations
 import org.springframework.stereotype.Service
 import org.springframework.web.context.WebApplicationContext.SCOPE_REQUEST
+import java.util.*
 
 @Service
-class ZendeskMappingDao {
+class ZendeskMappingDao(
+    @Autowired val zendeskMappingTemplate: RedisTemplate<String, Any>,
+    @Autowired val logTemplate: RedisTemplate<String, ImportLog>
+) {
 
-    private val userIdMap: MutableMap<Long, Long> = mutableMapOf() // FIXME: syncronized
-    private val customFieldIdMap: MutableMap<Long, Long> = mutableMapOf()
-    private val organizationIdMap: MutableMap<Long, Long> = mutableMapOf()
-    private val groupIdMap: MutableMap<Long, Long> = mutableMapOf()
-
-    fun addCustomFieldMapping(zendeskId: Long, grispiId: Long) {
-        customFieldIdMap.put(zendeskId, grispiId)
+    companion object {
+        const val CUSTOM_FIELD = "cfield"
+        const val USER = "user"
+        const val ORGANIZATION = "org"
+        const val GROUP = "group"
+        const val TICKET = "ticket"
     }
 
-    fun getCustomFieldId(zendeskId: Long): Long? {
-        return customFieldIdMap.get(zendeskId) ?: throw GrispiReferenceNotFoundException(zendeskId, "custom field")
+    private val opsForValue: ValueOperations<String, Any> = zendeskMappingTemplate.opsForValue()
+    private val opsForList: ListOperations<String, ImportLog> = logTemplate.opsForList()
+
+    fun errorLog(operationId: String, resourceName: String, message: String, externalId: Long?) {
+        val logKey = generateLogKey(operationId, LogType.ERROR)
+        opsForList.rightPush(logKey, ImportLog(LogType.ERROR, resourceName, message, externalId))
     }
 
-    fun addOrganizationMapping(zendeskId: Long, grispiId: Long) {
-        organizationIdMap.put(zendeskId, grispiId)
+    fun successLog(operationId: String, resourceName: String, message: String, externalId: Long?) {
+        val logKey = generateLogKey(operationId, LogType.SUCCESS)
+        opsForList.rightPush(logKey, ImportLog(LogType.SUCCESS, resourceName, message, externalId))
     }
 
-    fun getOrganizationId(zendeskId: Long): Long? {
-        return organizationIdMap.get(zendeskId) ?: throw GrispiReferenceNotFoundException(zendeskId, "organization")
+    fun infoLog(operationId: String, resourceName: String, message: String, externalId: Long?) {
+        val logKey = generateLogKey(operationId, LogType.INFO)
+        opsForList.rightPush(logKey, ImportLog(LogType.INFO, resourceName, message, externalId))
     }
 
-    fun addUserMapping(zendeskId: Long, grispiId: Long) {
-        userIdMap.put(zendeskId, grispiId)
+    fun getAllLogs(operationId: String): ImportLogContainer {
+        return ImportLogContainer(
+            opsForList.range(generateLogKey(operationId, LogType.SUCCESS), 0, Long.MAX_VALUE) as List<ImportLog>,
+            opsForList.range(generateLogKey(operationId, LogType.ERROR), 0, Long.MAX_VALUE) as List<ImportLog>,
+            opsForList.range(generateLogKey(operationId, LogType.INFO), 0, Long.MAX_VALUE) as List<ImportLog>,
+        )
     }
 
-    fun getUserId(zendeskId: Long): Long? {
-        return userIdMap.get(zendeskId) ?: throw GrispiReferenceNotFoundException(zendeskId, "user")
+    fun addOrganizationMapping(operationId: String, zendeskId: Long, grispiId: Long) {
+        val key = generateDataKey(operationId, ORGANIZATION, zendeskId)
+        opsForValue.append(key, grispiId.toString())
     }
 
-    fun addGroupMapping(zendeskId: Long, grispiId: Long) {
-        groupIdMap.put(zendeskId, grispiId)
+    fun getOrganizationId(operationId: String, zendeskId: Long): Long {
+        val key = generateDataKey(operationId, ORGANIZATION, zendeskId)
+        return opsForValue.get(key)?.toString()?.toLong() ?: throw GrispiReferenceNotFoundException(zendeskId, "organization")
     }
 
-    fun getGroupId(zendeskId: Long): Long? {
-        return groupIdMap.get(zendeskId)
+    fun addCustomFieldMapping(operationId: String, zendeskId: Long, grispiId: Long) {
+        val key = generateDataKey(operationId, CUSTOM_FIELD, zendeskId)
+        opsForValue.append(key, grispiId.toString())
+    }
+
+    fun getCustomFieldId(operationId: String, zendeskId: Long): Long {
+        val key = generateDataKey(operationId, CUSTOM_FIELD, zendeskId)
+        return opsForValue.get(key)?.toString()?.toLong() ?: throw GrispiReferenceNotFoundException(zendeskId, "custom field")
+    }
+
+    fun addUserMapping(operationId: String, zendeskId: Long, grispiId: Long) {
+        val key = generateDataKey(operationId, USER, zendeskId)
+        opsForValue.append(key, grispiId.toString())
+    }
+
+    fun getUserId(operationId: String, zendeskId: Long): Long {
+        val key = generateDataKey(operationId, USER, zendeskId)
+        return opsForValue.get(key)?.toString()?.toLong() ?: throw GrispiReferenceNotFoundException(zendeskId, "user")
+    }
+
+    fun addGroupMapping(operationId: String, zendeskId: Long, grispiId: Long) {
+        val key = generateDataKey(operationId, GROUP, zendeskId)
+        opsForValue.append(key, grispiId.toString())
+    }
+
+    fun getGroupId(operationId: String, zendeskId: Long): Long {
+        val key = generateDataKey(operationId, GROUP, zendeskId)
+        return opsForValue.get(key)?.toString()?.toLong() ?: throw GrispiReferenceNotFoundException(zendeskId, "user")
+    }
+
+    fun addTicketMapping(operationId: String, zendeskId: Long, grispiId: String) {
+        val key = generateDataKey(operationId, TICKET, zendeskId)
+        opsForValue.append(key, grispiId.toString())
+    }
+
+    fun getTicketId(operationId: String, zendeskId: Long): Long {
+        val key = generateDataKey(operationId, TICKET, zendeskId)
+        return opsForValue.get(key)?.toString()?.toLong() ?: throw GrispiReferenceNotFoundException(zendeskId, "user")
+    }
+
+    private fun generateLogKey(operationId: String, logType: LogType): String {
+        return "${operationId}_${logType.toString().lowercase()}_logs"
+    }
+
+    // TODO: 7.12.2021 change key
+    private fun generateDataKey(operationId: String, resourceName: String, zendeskId: Long): String {
+        return "${operationId}_data_${resourceName}_${zendeskId}"
     }
 
 }
