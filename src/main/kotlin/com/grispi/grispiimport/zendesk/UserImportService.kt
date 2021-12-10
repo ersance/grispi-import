@@ -1,9 +1,7 @@
 package com.grispi.grispiimport.zendesk
 
-import com.grispi.grispiimport.common.ImportLogDao
 import com.grispi.grispiimport.grispi.GrispiApi
 import com.grispi.grispiimport.grispi.GrispiApiException
-import jodd.json.JsonParser
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
@@ -11,8 +9,7 @@ import org.springframework.stereotype.Service
 class UserImportService(
     @Autowired val grispiApi: GrispiApi,
     @Autowired val zendeskApi: ZendeskApi,
-    @Autowired val zendeskMappingDao: ZendeskMappingDao,
-    @Autowired val importLogDao: ImportLogDao
+    @Autowired val zendeskMappingDao: ZendeskMappingDao
 ) {
 
     companion object {
@@ -20,26 +17,34 @@ class UserImportService(
     }
 
     fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
-        val users = zendeskApi.getUsers(zendeskImportRequest.zendeskApiCredentials)
-        val zendeskUsers = JsonParser().parse(users.bodyRaw(), ZendeskUsers::class.java)
+        val zendeskUsers = zendeskApi.getUsers(zendeskImportRequest.zendeskApiCredentials)
 
-        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskUsers.users.count()} users found", null)
-        println("user import process is started for ${zendeskUsers.users.count()} users")
+        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskUsers.count()} users found", null)
+        println("user import process is started for ${zendeskUsers.count()} users")
 
-        for (zendeskUser in zendeskUsers.users) {
+        for (zendeskUser in zendeskUsers) {
             try {
                 val createUserResponse = grispiApi.createUser(
                     zendeskUser.toGrispiUserRequest(),
                     zendeskImportRequest.grispiApiCredentials
                 )
-                val createdUserId = JsonParser().parse(createUserResponse.bodyRaw(), Long::class.java)
-                zendeskMappingDao.addUserMapping(operationId, zendeskUser.id, createdUserId)
+
+                zendeskMappingDao.addUserMapping(operationId, zendeskUser.id, createUserResponse.bodyText().toLong())
 
                 zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "{${zendeskUser.name}} created successfully", null)
-            } catch (exception: GrispiApiException) {
-                zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
-                    "{${zendeskUser.name} with id: ${zendeskUser.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
-                    null)
+            } catch (exception: RuntimeException) {
+                when (exception) {
+                    is GrispiApiException -> {
+                        zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+                            "{${zendeskUser.name} with id: ${zendeskUser.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
+                            null)
+                    }
+                    else -> {
+                        zendeskMappingDao.errorLog(operationId, TicketImportService.RESOURCE_NAME,
+                            "{${zendeskUser.name} with id: ${zendeskUser.id}} couldn't be imported. ${exception.message}",
+                            null)
+                    }
+                }
             }
         }
 

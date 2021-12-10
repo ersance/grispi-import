@@ -13,8 +13,7 @@ import org.springframework.web.context.WebApplicationContext
 class OrganizationImportService(
     @Autowired val grispiApi: GrispiApi,
     @Autowired val zendeskApi: ZendeskApi,
-    @Autowired val zendeskMappingDao: ZendeskMappingDao,
-    @Autowired val importLogDao: ImportLogDao
+    @Autowired val zendeskMappingDao: ZendeskMappingDao
 ) {
 
     companion object {
@@ -23,12 +22,11 @@ class OrganizationImportService(
 
     fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
         val organizations = zendeskApi.getOrganizations(zendeskImportRequest.zendeskApiCredentials)
-        val zendeskOrganizations = JsonParser().parse(organizations.bodyRaw(), ZendeskOrganizations::class.java)
 
-        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskOrganizations.organizations.count()} organizations found", null)
-        println("organization import process is started for ${zendeskOrganizations.organizations} items")
+        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${organizations.count()} organizations found", null)
+        println("organization import process is started for ${organizations.count()} items")
 
-        for (zendeskOrganization in zendeskOrganizations.organizations) {
+        for (zendeskOrganization in organizations) {
             try {
                 val createOrganizationResponse = grispiApi.createOrganization(
                     zendeskOrganization.toGrispiOrganizationRequest(),

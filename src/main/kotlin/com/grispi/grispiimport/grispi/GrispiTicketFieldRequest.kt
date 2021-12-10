@@ -42,6 +42,30 @@ class GrispiTicketFieldRequest(
         fun build(): GrispiTicketFieldRequest {
             return GrispiTicketFieldRequest(key, name, type, descriptionForAgents, descriptionForEndUsers, titleForAgents, titleForEndUsers, required, permission, attributes, options)
         }
+
+        /**
+         * this custom field is to keep zendesk ticket id. So we can relate tickets in case of failure
+         */
+        fun buildZendeskIdCustomField(): GrispiTicketFieldRequest {
+            val key = ZENDESK_ID_CUSTOM_FIELD
+            val name = "Zendesk Id"
+            val type = FieldType.TEXT
+            val descriptionForAgents = "zendesk id"
+            val descriptionForEndUsers = ""
+            val titleForAgents = "zendesk id"
+            val titleForEndUsers = ""
+            val required = RequiredStatus.NOT_REQUIRED
+            val permission = FieldPermissions.AGENT_ONLY
+            val attributes = emptyList<String>()
+            val options = null
+            return GrispiTicketFieldRequest(
+                key, name, type, descriptionForAgents, descriptionForEndUsers, titleForAgents, titleForEndUsers, required, permission, attributes, options
+            )
+        }
+
+        companion object {
+            val ZENDESK_ID_CUSTOM_FIELD = "tiz.zendesk_id"
+        }
     }
 
 }

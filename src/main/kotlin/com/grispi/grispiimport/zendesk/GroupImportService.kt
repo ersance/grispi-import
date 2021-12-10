@@ -14,8 +14,7 @@ import org.springframework.web.context.WebApplicationContext
 class GroupImportService(
     @Autowired val grispiApi: GrispiApi,
     @Autowired val zendeskApi: ZendeskApi,
-    @Autowired val zendeskMappingDao: ZendeskMappingDao,
-    @Autowired val importLogDao: ImportLogDao
+    @Autowired val zendeskMappingDao: ZendeskMappingDao
 ) {
 
     companion object {
@@ -23,13 +22,12 @@ class GroupImportService(
     }
 
     fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
-        val groups = zendeskApi.getGroups(zendeskImportRequest.zendeskApiCredentials)
-        val zendeskGroups = JsonParser().parse(groups.bodyRaw(), ZendeskGroups::class.java)
+        val zendeskGroups = zendeskApi.getGroups(zendeskImportRequest.zendeskApiCredentials)
 
-        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskGroups.groups.count()} groups found", null)
-        println("ticket import process is started for ${zendeskGroups.groups} tickets")
+        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskGroups.count()} groups found", null)
+        println("group import process is started for ${zendeskGroups.count()} groups")
 
-        for (zendeskGroup in zendeskGroups.groups) {
+        for (zendeskGroup in zendeskGroups) {
             try {
                 val createGroupResponse = grispiApi.createGroup(
                     zendeskGroup.toGrispiGroupRequest(),
@@ -39,10 +37,19 @@ class GroupImportService(
                 zendeskMappingDao.addGroupMapping(operationId, zendeskGroup.id, createdGroupId)
 
                 zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "{${zendeskGroup.name}} created successfully", null)
-            } catch (exception: GrispiApiException) {
-                zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
-                    "{${zendeskGroup.name} with id: ${zendeskGroup.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
-                    null)
+            } catch (exception: RuntimeException) {
+                when (exception) {
+                    is GrispiApiException -> {
+                        zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+                            "{${zendeskGroup.name} with id: ${zendeskGroup.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
+                            null)
+                    }
+                    else -> {
+                        zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+                            "{${zendeskGroup.name} with id: ${zendeskGroup.id}} couldn't be imported. ${exception.message}",
+                            null)
+                    }
+                }
             }
         }
 

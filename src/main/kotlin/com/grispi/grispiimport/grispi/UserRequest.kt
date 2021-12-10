@@ -13,7 +13,8 @@ open class UserRequest private constructor(
     val phone: String?,
     val fullName: String?,
     val role: String?,
-    val tags: Set<String>?
+    val tags: Set<String>?,
+    val fields: Map<String, String>?
 ): GrispiApiRequest() {
 
     class Builder {
@@ -23,6 +24,7 @@ open class UserRequest private constructor(
         private var fullName: String? = null
         private var role: String? = null
         private var tags: MutableSet<String> = mutableSetOf()
+        private var fields: Map<String, String>? = mapOf()
 
         fun email(email: String?) = apply { this.email = email }
         fun password(password: String) = apply { this.password = password }
@@ -31,9 +33,10 @@ open class UserRequest private constructor(
         fun role(role: Role) = apply { this.role = role.authority }
         fun tags(vararg tags: String) = apply { this.tags.addAll(tags.toSet()) }
         fun tags(tags: Set<String>) = apply { this.tags.addAll(tags) }
+        fun fields(fields: Map<String, String>?) = apply { this.fields = fields }
 
         fun build(): UserRequest {
-            return UserRequest(email, password, phone, fullName, role, tags)
+            return UserRequest(email, password, phone, fullName, role, tags, fields)
         }
 
         fun toJson(): String {
@@ -69,6 +72,7 @@ open class UserRequest private constructor(
         phone = userRequest.phone,
         fullName = userRequest.fullName,
         role = userRequest.role,
-        tags = userRequest.tags
+        tags = userRequest.tags,
+        fields = userRequest.fields
     )
 }

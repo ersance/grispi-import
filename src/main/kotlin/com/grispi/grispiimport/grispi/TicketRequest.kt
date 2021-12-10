@@ -115,9 +115,4 @@ class TicketRequest private constructor(
         }
 
     }
-
-
-
-    // TODO: 29.11.2021 create zendesk id custom field
-    // TODO: 29.11.2021 add zendesk import tag
 }

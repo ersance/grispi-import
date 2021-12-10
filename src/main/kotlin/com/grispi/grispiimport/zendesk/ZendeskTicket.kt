@@ -1,9 +1,7 @@
 package com.grispi.grispiimport.zendesk
 
-import com.grispi.grispiimport.grispi.TicketPriority
-import com.grispi.grispiimport.grispi.TicketRequest
-import com.grispi.grispiimport.grispi.TicketStatus
-import com.grispi.grispiimport.grispi.TicketType
+import com.grispi.grispiimport.grispi.*
+import com.vdurmont.emoji.EmojiParser
 import jodd.json.meta.JSON
 import java.lang.IllegalArgumentException
 import java.time.Instant
@@ -78,7 +76,7 @@ class ZendeskTicket {
     val ticketFormId: Long = -1
 
     @JSON(name = "custom_fields")
-    val fields: List<ZendeskCustomField> = emptyList()
+    val fields: MutableList<ZendeskCustomField> = mutableListOf()
 
     // TODO: 27.11.2021 comment - creator(email)
     // TODO: 30.11.2021 Creator & requester cannot be null and the users for them should be imported
@@ -115,8 +113,12 @@ class ZendeskTicket {
             .priority(mapPriority())
             .followers(grispiFollowerIds)
             .emailCcs(grispiEmailCcIds)
-            .comment(TicketRequest.Comment_(description, true, grispiCreatorId, createdAt))
-            .customField(fields.stream().filter { field -> field.value != null }.collect(Collectors.toMap(ZendeskCustomField::toGrispiKey, ZendeskCustomField::value)))
+            .comment(TicketRequest.Comment_(EmojiParser.parseToAliases(description), true, grispiCreatorId, createdAt))
+            .customField(GrispiTicketFieldRequest.Builder.ZENDESK_ID_CUSTOM_FIELD, id.toString())
+            .customField(fields.stream()
+                .filter { field -> field.value != null }
+                .collect(Collectors.toMap(ZendeskCustomField::toGrispiKey, ZendeskCustomField::value))
+            )
             .build()
     }
 

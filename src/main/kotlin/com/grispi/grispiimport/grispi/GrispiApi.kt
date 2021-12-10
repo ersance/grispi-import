@@ -3,6 +3,7 @@ package com.grispi.grispiimport.grispi
 import jodd.http.HttpRequest
 import jodd.http.HttpResponse
 import jodd.http.HttpStatus
+import jodd.json.JsonSerializer
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -18,8 +19,10 @@ class GrispiApi {
         const val ORGANIZATIONS_ENDPOINT: String = "/import/organizations"
         const val GROUPS_ENDPOINT: String = "/import/groups"
         const val CUSTOM_FIELD_ENDPOINT: String = "/import/custom-fields"
+        const val USER_FIELD_ENDPOINT: String = "/import/user-fields"
         const val USER_ENDPOINT: String = "/import/users"
         const val TICKET_ENDPOINT: String = "/import/tickets"
+        const val TICKET_COMMENT_ENDPOINT: String = "/comments"
     }
 
     fun createOrganization(grispiOrganizationRequest: GrispiOrganizationRequest, grispiApiCredentials: GrispiApiCredentials): HttpResponse {
@@ -52,6 +55,16 @@ class GrispiApi {
         return httpResponse
     }
 
+    fun createUserField(grispiUserFieldRequest: GrispiUserFieldRequest, apiCredentials: GrispiApiCredentials): HttpResponse {
+        val httpResponse = post(USER_FIELD_ENDPOINT, grispiUserFieldRequest.toJson(), apiCredentials)
+
+        if (!httpResponse.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+            throw GrispiApiException(httpResponse.statusCode(), httpResponse.bodyText())
+        }
+
+        return httpResponse
+    }
+
     fun createUser(userRequest: UserRequest, apiCredentials: GrispiApiCredentials): HttpResponse {
         val httpResponse = post(USER_ENDPOINT, userRequest.toJson(), apiCredentials)
 
@@ -72,6 +85,18 @@ class GrispiApi {
         return httpResponse
     }
 
+    fun createComments(commentRequests: List<CommentRequest>?, apiCredentials: GrispiApiCredentials): HttpResponse {
+        val commentRequestJson = JsonSerializer().deep(true).serialize(commentRequests)
+
+        val httpResponse = post("${TICKET_ENDPOINT}/${commentRequests?.first()?.ticketKey}${TICKET_COMMENT_ENDPOINT}", commentRequestJson, apiCredentials)
+
+        if (!httpResponse.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+            throw GrispiApiException(httpResponse.statusCode(), httpResponse.bodyText())
+        }
+
+        return httpResponse
+    }
+
     private fun post(endpoint: String, requestBody: String, apiCredentials: GrispiApiCredentials): HttpResponse {
         return HttpRequest
             .post("${HOST}${endpoint}")
@@ -79,6 +104,7 @@ class GrispiApi {
             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .header(HttpHeaders.AUTHORIZATION, "Bearer ${apiCredentials.token}")
             .header(TENANT_ID_HEADER_NAME, apiCredentials.tenantId)
+            .timeout(10000)
             .send()
     }
 

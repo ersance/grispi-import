@@ -7,7 +7,6 @@ class ZendeskCustomField {
     @JSON(name = "id")
     val id: Long? = null
 
-    // String or List<String>
     @JSON(name = "value")
     val value: Any? = null
 

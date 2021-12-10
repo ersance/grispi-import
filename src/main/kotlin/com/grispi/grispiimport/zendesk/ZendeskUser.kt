@@ -4,6 +4,7 @@ import com.grispi.grispiimport.grispi.Role
 import com.grispi.grispiimport.grispi.User
 import com.grispi.grispiimport.grispi.UserRequest
 import jodd.json.meta.JSON
+import java.util.stream.Collectors
 
 class ZendeskUser {
 
@@ -25,7 +26,9 @@ class ZendeskUser {
     @JSON(name = "tags")
     val tags: MutableSet<String> = mutableSetOf()
 
-    // TODO: 30.11.2021 validate phone number and send null if invalid
+    @JSON(name = "user_fields")
+    val userFields: Map<String, String> = mapOf()
+
     fun toGrispiUserRequest(): UserRequest {
         return UserRequest.Builder()
             .email(email ?: generateEmail())
@@ -35,6 +38,7 @@ class ZendeskUser {
             .role(mapRole())
             .tags(tags)
             .tags("zendesk-import")
+            .fields(userFields.mapKeys { "uiz.${it.key}" })
             .build()
     }
 

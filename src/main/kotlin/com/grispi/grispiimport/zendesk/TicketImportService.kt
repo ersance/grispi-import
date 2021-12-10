@@ -19,7 +19,7 @@ class TicketImportService(
     companion object {
         const val RESOURCE_NAME = "ticket"
 
-        const val PAGE_SIZE = 5
+        const val PAGE_SIZE = 100 // 100 is default size on zendesk
     }
 
     fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
@@ -58,25 +58,25 @@ class TicketImportService(
                 zendeskMappingDao.successLog(operationId, RESOURCE_NAME,
                     "{${zendeskTicket.subject}} created successfully",
                     null)
-                        } catch (exception: RuntimeException) {
-                            when (exception) {
-                                is GrispiApiException -> {
-                                    zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
-                                        "{${zendeskTicket.subject} with id: ${zendeskTicket.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
-                                        null)
-                                }
-                                is GrispiReferenceNotFoundException -> {
-                                    zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
-                                        "{${zendeskTicket.subject} with id: ${zendeskTicket.id}} couldn't be imported. ${exception.message()}",
-                                        null)
-                                }
-                                else -> {
-                                    zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
-                                        "{${zendeskTicket.subject} with id: ${zendeskTicket.id}} couldn't be imported. ${exception.message}",
-                                        null)
-                                }
-                            }
-                        }
+            } catch (exception: RuntimeException) {
+                when (exception) {
+                    is GrispiApiException -> {
+                        zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+                            "{${zendeskTicket.subject} with id: ${zendeskTicket.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
+                            null)
+                    }
+                    is GrispiReferenceNotFoundException -> {
+                        zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+                            "{${zendeskTicket.subject} with id: ${zendeskTicket.id}} couldn't be imported. ${exception.message()}",
+                            null)
+                    }
+                    else -> {
+                        zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+                            "{${zendeskTicket.subject} with id: ${zendeskTicket.id}} couldn't be imported. ${exception.message}",
+                            null)
+                    }
+                }
+            }
         }
     }
 
