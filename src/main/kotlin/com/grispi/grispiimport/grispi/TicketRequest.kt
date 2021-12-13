@@ -2,7 +2,10 @@ package com.grispi.grispiimport.grispi
 
 import jodd.json.JsonSerializer
 import java.time.Instant
-import java.time.LocalDateTime
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+
 
 /**
  * Created on November, 2021
@@ -13,7 +16,7 @@ class TicketRequest private constructor(
     val channel: TicketChannel?,
     val formId: Long?,
     val comments: Set<Comment_?>,
-    val fields: Set<FieldFromUi_>?
+    val fields: Set<FieldFromUi_>?,
 ) {
 
     companion object {
@@ -46,7 +49,7 @@ class TicketRequest private constructor(
             publicVisible: Boolean = true,
             creator: String,
             createdAt: Instant,
-            attachmentIds: Set<String>? = null
+            attachmentIds: Set<String>? = null,
         ) : this(body, publicVisible, User_(creator,"import@example.com", null), createdAt.toString(), attachmentIds)
     }
 
@@ -97,8 +100,10 @@ class TicketRequest private constructor(
                 run {
                     if (entry.value is Collection<*>) {
                         fields.add(FieldFromUi_(entry.key, (entry.value as Collection<*>).joinToString(",")))
-                    } else {
-                        fields.add(FieldFromUi_(entry.key, entry.value.toString()))
+                    }
+                    else {
+                        val value = convertDateToMillis(entry.value.toString()) ?: entry.value.toString()
+                        fields.add(FieldFromUi_(entry.key, value))
                     }
                 }
             }
@@ -112,6 +117,16 @@ class TicketRequest private constructor(
         fun toJson(): String {
             val ticketRequest = build()
             return ticketRequest.toJson()
+        }
+
+        private fun convertDateToMillis(value: String): String? {
+            try {
+                val localDate = LocalDate.parse(value, DateTimeFormatter.ISO_DATE)
+                val instant = localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                return instant.toEpochMilli().toString()
+            } catch (ex: RuntimeException) {
+                return null;
+            }
         }
 
     }

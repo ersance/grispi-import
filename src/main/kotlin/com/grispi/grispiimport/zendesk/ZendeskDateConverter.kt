@@ -11,7 +11,11 @@ class ZendeskDateConverter : ValueConverter<String, Instant> {
     val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
 
     override fun convert(source: String?): Instant {
-        return dateFormat.parse(source).toInstant()
+        try {
+            return dateFormat.parse(source).toInstant()
+        } catch (ex: RuntimeException) {
+            return Instant.now()
+        }
     }
 
 }

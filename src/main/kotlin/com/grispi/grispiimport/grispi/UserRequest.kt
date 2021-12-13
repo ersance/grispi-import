@@ -14,7 +14,7 @@ open class UserRequest private constructor(
     val fullName: String?,
     val role: String?,
     val tags: Set<String>?,
-    val fields: Map<String, String>?
+    val fields: Set<TicketRequest.FieldFromUi_>?
 ): GrispiApiRequest() {
 
     class Builder {
@@ -24,7 +24,7 @@ open class UserRequest private constructor(
         private var fullName: String? = null
         private var role: String? = null
         private var tags: MutableSet<String> = mutableSetOf()
-        private var fields: Map<String, String>? = mapOf()
+        private var fields: Set<TicketRequest.FieldFromUi_>? = setOf()
 
         fun email(email: String?) = apply { this.email = email }
         fun password(password: String) = apply { this.password = password }
@@ -33,7 +33,7 @@ open class UserRequest private constructor(
         fun role(role: Role) = apply { this.role = role.authority }
         fun tags(vararg tags: String) = apply { this.tags.addAll(tags.toSet()) }
         fun tags(tags: Set<String>) = apply { this.tags.addAll(tags) }
-        fun fields(fields: Map<String, String>?) = apply { this.fields = fields }
+        fun fields(fields: Set<TicketRequest.FieldFromUi_>?) = apply { this.fields = fields }
 
         fun build(): UserRequest {
             return UserRequest(email, password, phone, fullName, role, tags, fields)

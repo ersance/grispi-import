@@ -55,7 +55,7 @@ class ZendeskUserField {
 
     fun toGrispiUserField(): GrispiUserFieldRequest {
         return GrispiUserFieldRequest.Builder()
-            .key(key)
+            .key("uiz.${key}")
             .name("${title} ${key}")
             .type(mapType())
             .description(description)

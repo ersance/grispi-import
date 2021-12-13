@@ -57,6 +57,9 @@ class ZendeskTicket {
     @JSON(name = "group_id")
     val groupId: Long? = null
 
+    @JSON(name = "brand_id")
+    val brandId: Long? = null
+
     @JSON(name = "collaborator_ids")
     val collaboratorIds: Set<Long> = emptySet()
 
@@ -115,6 +118,7 @@ class ZendeskTicket {
             .emailCcs(grispiEmailCcIds)
             .comment(TicketRequest.Comment_(EmojiParser.parseToAliases(description), true, grispiCreatorId, createdAt))
             .customField(GrispiTicketFieldRequest.Builder.ZENDESK_ID_CUSTOM_FIELD, id.toString())
+            .customField(GrispiTicketFieldRequest.Builder.ZENDESK_BRAND_ID_CUSTOM_FIELD, brandId.toString())
             .customField(fields.stream()
                 .filter { field -> field.value != null }
                 .collect(Collectors.toMap(ZendeskCustomField::toGrispiKey, ZendeskCustomField::value))
@@ -140,6 +144,8 @@ class ZendeskTicket {
             "pending" -> TicketStatus.PENDING
             "new" -> TicketStatus.NEW
             "solved" -> TicketStatus.SOLVED
+            "closed" -> TicketStatus.CLOSED
+            "hold" -> TicketStatus.PENDING
             else -> throw IllegalArgumentException("Unexpected zendesk ticket status: '${status}'")
         }
     }

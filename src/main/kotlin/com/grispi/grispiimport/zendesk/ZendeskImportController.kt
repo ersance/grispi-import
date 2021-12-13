@@ -23,23 +23,23 @@ class ZendeskImportController(
     @PostMapping("/import")
     fun importZendeskResources(@RequestBody zendeskImportRequest: ZendeskImportRequest): ZendeskImportResponse {
 
-        val operationId = UUID.randomUUID().toString()
+        val operationId = "op_id"
 
-        zendeskMappingDao.initializeTenant(operationId, zendeskImportRequest.grispiApiCredentials.tenantId)
+//        zendeskMappingDao.initializeTenant(operationId, zendeskImportRequest.grispiApiCredentials.tenantId)
+//
+//        organizationImportService.import(operationId, zendeskImportRequest)
+//
+//        groupImportService.import(operationId, zendeskImportRequest)
+//
+//        ticketFieldImportService.import(operationId, zendeskImportRequest)
+//
+//        userFieldImportService.import(operationId, zendeskImportRequest)
+//
+//        userImportService.import(operationId, zendeskImportRequest)
 
-        organizationImportService.import(operationId, zendeskImportRequest)
+//        ticketImportService.import(operationId, zendeskImportRequest)
 
-        groupImportService.import(operationId, zendeskImportRequest)
-
-        ticketFieldImportService.import(operationId, zendeskImportRequest)
-
-        userFieldImportService.import(operationId, zendeskImportRequest)
-
-        userImportService.import(operationId, zendeskImportRequest)
-
-        ticketImportService.import(operationId, zendeskImportRequest)
-
-        ticketCommentImportService.import(operationId, zendeskImportRequest)
+//        ticketCommentImportService.import(operationId, zendeskImportRequest)
 
         return ZendeskImportResponse(operationId, zendeskMappingDao.getAllLogs(operationId))
     }

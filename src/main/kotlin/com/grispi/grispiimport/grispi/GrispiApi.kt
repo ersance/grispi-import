@@ -100,8 +100,9 @@ class GrispiApi {
     private fun post(endpoint: String, requestBody: String, apiCredentials: GrispiApiCredentials): HttpResponse {
         return HttpRequest
             .post("${HOST}${endpoint}")
-            .body(requestBody)
-            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .bodyText(requestBody, "")
+            .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE)
+//            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .header(HttpHeaders.AUTHORIZATION, "Bearer ${apiCredentials.token}")
             .header(TENANT_ID_HEADER_NAME, apiCredentials.tenantId)
             .timeout(10000)

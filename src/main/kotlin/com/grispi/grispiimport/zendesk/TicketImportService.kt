@@ -2,12 +2,15 @@ package com.grispi.grispiimport.zendesk
 
 import com.grispi.grispiimport.grispi.GrispiApi
 import com.grispi.grispiimport.grispi.GrispiApiException
+import com.grispi.grispiimport.zendesk.ZendeskApi.Companion.PAGE_SIZE
 import jodd.json.JsonParser
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 @Service
 class TicketImportService(
@@ -18,15 +21,13 @@ class TicketImportService(
 
     companion object {
         const val RESOURCE_NAME = "ticket"
-
-        const val PAGE_SIZE = 100 // 100 is default size on zendesk
     }
 
     fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
-
         val ticketCount = zendeskApi.getTicketCount(zendeskImportRequest.zendeskApiCredentials)
+
         zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${ticketCount} tickets found", null)
-        println("ticket import process is started for ${ticketCount} tickets")
+        println("ticket import process is started for ${ticketCount} tickets at: ${LocalDateTime.now()}")
 
         val combinedTickets: MutableList<CompletableFuture<Unit>> = mutableListOf()
         for (index in 1..(BigDecimal(ticketCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt())) {
@@ -39,14 +40,13 @@ class TicketImportService(
             combinedTickets.add(thenApplyAsync)
         }
 
-        CompletableFuture.allOf(*combinedTickets.toTypedArray()).get()
+        CompletableFuture.allOf(*combinedTickets.toTypedArray()).get(1, TimeUnit.DAYS)
 
         println("ticket import process is done")
     }
 
     private fun import(zendeskTickets: List<ZendeskTicket>, zendeskImportRequest: ZendeskImportRequest, operationId: String) {
         for (zendeskTicket in zendeskTickets) {
-            println(zendeskTicket.toTicketRequest(operationId, zendeskMappingDao::getUserId, zendeskMappingDao::getGroupId).toString())
             try {
                 val createTicketResponse = grispiApi.createTicket(
                     zendeskTicket.toTicketRequest(operationId, zendeskMappingDao::getUserId, zendeskMappingDao::getGroupId),

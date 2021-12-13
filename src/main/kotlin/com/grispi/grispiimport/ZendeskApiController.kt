@@ -25,13 +25,14 @@ class ZendeskApiController(
 
   companion object {
     val apiCredentials =
-      ZendeskApiCredentials("dedeler7787", "ersan@grispi.com", "YEUHw0VWd4B3upwJEoWtssZlDYeDrR9DE7MmOmiQ")
+      ZendeskApiCredentials("dugunbuketi", "bilgehan@dugunbuketi.com", "BApUrJvH7zpa8obvOFRE3LCuRUuVbMRrSHTRrnop")
   }
 
-//  @GetMapping("/getir")
-//  fun getir(@RequestParam("tenant") tenantId: String): Map<String, Any> {
-//    zendeskApi.getTicketComments(9L,)
-//  }
+  @GetMapping("/getir")
+  fun getir(@RequestParam("tenant") tenantId: String): List<ZendeskOrganization> {
+    val organizations = zendeskApi.getOrganizations(apiCredentials, ZendeskPageParams(1, 100))
+    return organizations
+  }
 
 //  @PostMapping("/comments")
 //  fun getir(@RequestBody zendeskImportRequest: ZendeskImportRequest): List<CommentRequest> {

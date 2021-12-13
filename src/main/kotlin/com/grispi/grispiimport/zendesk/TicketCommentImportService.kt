@@ -6,6 +6,7 @@ import jodd.json.JsonParser
 import jodd.json.JsonSerializer
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 
 @Service
 class TicketCommentImportService(
@@ -20,7 +21,7 @@ class TicketCommentImportService(
     fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
 
         val ticketsZendeskIds = zendeskMappingDao.getTicketsZendeskIds(operationId)
-        println("comment import process is started for ${ticketsZendeskIds.count()} tickets")
+        println("comment import process is started for ${ticketsZendeskIds.count()} tickets at: ${LocalDateTime.now()}")
 
         for (zendeskId in ticketsZendeskIds) {
             try {
@@ -28,7 +29,6 @@ class TicketCommentImportService(
 
                 val ticketKey = zendeskMappingDao.getTicketKey(operationId, zendeskId)
 
-                println("processing for ticket: ${ticketKey}")
                 println("${ticketComments.count()} comments found.")
 
                 val commentRequests = ticketComments.map {it.toCommentRequest(operationId, ticketKey, zendeskMappingDao::getUserId)}
@@ -55,7 +55,7 @@ class TicketCommentImportService(
             }
         }
 
-        println("ticket comment import process is done")
+        println("ticket comment import process is done at: ${LocalDateTime.now()}")
     }
 
 }

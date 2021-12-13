@@ -1,6 +1,7 @@
 package com.grispi.grispiimport.zendesk
 
 import com.grispi.grispiimport.grispi.Role
+import com.grispi.grispiimport.grispi.TicketRequest
 import com.grispi.grispiimport.grispi.User
 import com.grispi.grispiimport.grispi.UserRequest
 import jodd.json.meta.JSON
@@ -38,7 +39,7 @@ class ZendeskUser {
             .role(mapRole())
             .tags(tags)
             .tags("zendesk-import")
-            .fields(userFields.mapKeys { "uiz.${it.key}" })
+            .fields(userFields.map { TicketRequest.FieldFromUi_("uiz.${it.key}", it.value) }.toSet())
             .build()
     }
 

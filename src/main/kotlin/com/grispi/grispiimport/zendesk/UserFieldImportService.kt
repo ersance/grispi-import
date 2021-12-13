@@ -4,6 +4,7 @@ import com.grispi.grispiimport.grispi.GrispiApi
 import com.grispi.grispiimport.grispi.GrispiApiException
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
+import java.time.LocalDateTime
 
 @Service
 class UserFieldImportService(
@@ -20,7 +21,7 @@ class UserFieldImportService(
         val zendeskUserFields = zendeskApi.getUserFields(zendeskImportRequest.zendeskApiCredentials)
 
         zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${zendeskUserFields.count()} user fields found", null)
-        println("user field import process is started for ${zendeskUserFields.count()} items")
+        println("user field import process is started for ${zendeskUserFields.count()} items at: ${LocalDateTime.now()}")
 
         for (zendeskUserField in zendeskUserFields) {
             try {

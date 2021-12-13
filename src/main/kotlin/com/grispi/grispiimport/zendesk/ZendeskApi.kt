@@ -20,6 +20,7 @@ class ZendeskApi(@Autowired val zendeskDateConverter: ZendeskDateConverter) {
 
     companion object {
         const val HOST: String = "zendesk.com/api/v2"
+        const val PAGE_SIZE = 100 // 100 is default size on zendesk
 
         const val CUSTOM_FIELD_ENDPOINT: String = "/ticket_fields"
         const val USER_FIELD_ENDPOINT: String = "/user_fields"
@@ -27,12 +28,15 @@ class ZendeskApi(@Autowired val zendeskDateConverter: ZendeskDateConverter) {
         const val GROUPS_ENDPOINT: String = "/groups"
         const val USERS_ENDPOINT: String = "/users"
         const val TICKETS_ENDPOINT: String = "/tickets"
-        const val TICKET_COUNT_ENDPOINT: String = "${TICKETS_ENDPOINT}/count"
         const val TICKET_COMMENTS_ENDPOINT: String = "/comments"
     }
 
     fun getTicketFields(apiCredentials: ZendeskApiCredentials): List<ZendeskTicketField> {
-        val response = get(CUSTOM_FIELD_ENDPOINT, apiCredentials)
+        val response = HttpRequest
+            .get("https://${apiCredentials.subdomain}.${HOST}${CUSTOM_FIELD_ENDPOINT}")
+            .basicAuthentication("${apiCredentials.email}/token", apiCredentials.token)
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .send()
 
         return JsonParser()
             .parse(response.bodyText(), ZendeskTicketFields::class.java)
@@ -40,19 +44,31 @@ class ZendeskApi(@Autowired val zendeskDateConverter: ZendeskDateConverter) {
     }
 
     fun getUserFields(apiCredentials: ZendeskApiCredentials): List<ZendeskUserField> {
-        val response = get(USER_FIELD_ENDPOINT, apiCredentials)
+        val response = HttpRequest
+            .get("https://${apiCredentials.subdomain}.${HOST}${USER_FIELD_ENDPOINT}")
+            .basicAuthentication("${apiCredentials.email}/token", apiCredentials.token)
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .send()
 
         return JsonParser()
             .parse(response.bodyText(), ZendeskUserFields::class.java)
             .userFields
     }
 
-    fun getUsers(apiCredentials: ZendeskApiCredentials): List<ZendeskUser> {
-        val response = get(USERS_ENDPOINT, apiCredentials)
+    fun getUsers(apiCredentials: ZendeskApiCredentials, zendeskPageParams: ZendeskPageParams): CompletableFuture<List<ZendeskUser>> {
+        return HttpRequest
+            .get("https://${apiCredentials.subdomain}.${HOST}${USERS_ENDPOINT}")
+            .query("page", zendeskPageParams.page).query("per_page", zendeskPageParams.perPage)
+            .basicAuthentication("${apiCredentials.email}/token", apiCredentials.token)
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .sendAsync()
+            .thenApply { response ->
+                if (!response.statusCode().equals(HttpStatus.HTTP_OK)) println("${response.statusCode()}____${response.bodyText()}")
 
-        return JsonParser()
-            .parse(response.bodyText(), ZendeskUsers::class.java)
-            .users
+                JsonParser()
+                    .parse(response.bodyText(), ZendeskUsers::class.java)
+                    .users
+            }
     }
 
     // TODO: 7.12.2021 handle zendesk api exception
@@ -74,7 +90,28 @@ class ZendeskApi(@Autowired val zendeskDateConverter: ZendeskDateConverter) {
     }
 
     fun getTicketCount(apiCredentials: ZendeskApiCredentials): Int {
-        val response = get(TICKET_COUNT_ENDPOINT, apiCredentials)
+        val response = get("${TICKETS_ENDPOINT}/count", apiCredentials)
+        return JsonParser().parseAsJsonObject(response.bodyText())
+            .getJsonObject("count")
+            .getValue("value")
+    }
+
+    fun getOrganizationCount(apiCredentials: ZendeskApiCredentials): Int {
+        val response = get("${ORGANIZATIONS_ENDPOINT}/count", apiCredentials)
+        return JsonParser().parseAsJsonObject(response.bodyText())
+            .getJsonObject("count")
+            .getValue("value")
+    }
+
+    fun getGroupCount(apiCredentials: ZendeskApiCredentials): Int {
+        val response = get("${GROUPS_ENDPOINT}/count", apiCredentials)
+        return JsonParser().parseAsJsonObject(response.bodyText())
+            .getJsonObject("count")
+            .getValue("value")
+    }
+
+    fun getUserCount(apiCredentials: ZendeskApiCredentials): Int {
+        val response = get("${USERS_ENDPOINT}/count", apiCredentials)
         return JsonParser().parseAsJsonObject(response.bodyText())
             .getJsonObject("count")
             .getValue("value")
@@ -93,16 +130,26 @@ class ZendeskApi(@Autowired val zendeskDateConverter: ZendeskDateConverter) {
             .comments
     }
 
-    fun getOrganizations(apiCredentials: ZendeskApiCredentials): List<ZendeskOrganization> {
-        val response = get(ORGANIZATIONS_ENDPOINT, apiCredentials)
+    fun getOrganizations(apiCredentials: ZendeskApiCredentials, zendeskPageParams: ZendeskPageParams): List<ZendeskOrganization> {
+        val response = HttpRequest
+            .get("https://${apiCredentials.subdomain}.${HOST}${ORGANIZATIONS_ENDPOINT}")
+            .query("page", zendeskPageParams.page).query("per_page", zendeskPageParams.perPage)
+            .basicAuthentication("${apiCredentials.email}/token", apiCredentials.token)
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .send()
 
         return JsonParser()
             .parse(response.bodyText(), ZendeskOrganizations::class.java)
             .organizations
     }
 
-    fun getGroups(apiCredentials: ZendeskApiCredentials): List<ZendeskGroup> {
-        val response = get(GROUPS_ENDPOINT, apiCredentials)
+    fun getGroups(apiCredentials: ZendeskApiCredentials, zendeskPageParams: ZendeskPageParams): List<ZendeskGroup> {
+        val response = HttpRequest
+            .get("https://${apiCredentials.subdomain}.${HOST}${GROUPS_ENDPOINT}")
+            .query("page", zendeskPageParams.page).query("per_page", zendeskPageParams.perPage)
+            .basicAuthentication("${apiCredentials.email}/token", apiCredentials.token)
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .send()
 
         return JsonParser()
             .parse(response.bodyText(), ZendeskGroups::class.java)

@@ -79,7 +79,7 @@ class ZendeskTicketField {
         val permission = mapPermission()
         return GrispiTicketFieldRequest.Builder()
             .key("tiz.$id")
-            .name(title.toString())
+            .name("${title.toString()} ${id}")
             .type(mapType())
             .titleForAgents(title.toString())
             .titleForEndUsers(if (permission.isEndUserVisible()) titleInPortal.toString() else "")
@@ -97,7 +97,12 @@ class ZendeskTicketField {
     }
 
     private fun mapAttributes(): List<String> {
-        return emptyList()
+        val type = mapType()
+        if (FieldType.TYPES_THAT_ALLOW_NEW_VALUES.contains(type)) {
+            return listOf("ALLOW_NEW_VALUES")
+        } else {
+            return emptyList()
+        }
     }
 
     private fun mapPermission(): FieldPermissions {

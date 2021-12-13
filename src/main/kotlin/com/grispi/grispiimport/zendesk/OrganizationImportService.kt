@@ -1,13 +1,14 @@
 package com.grispi.grispiimport.zendesk
 
-import com.grispi.grispiimport.common.ImportLogDao
 import com.grispi.grispiimport.grispi.GrispiApi
 import com.grispi.grispiimport.grispi.GrispiApiException
+import com.grispi.grispiimport.zendesk.ZendeskApi.Companion.PAGE_SIZE
 import jodd.json.JsonParser
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
-import org.springframework.web.context.WebApplicationContext
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.time.LocalDateTime
 
 @Service
 class OrganizationImportService(
@@ -21,32 +22,42 @@ class OrganizationImportService(
     }
 
     fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
-        val organizations = zendeskApi.getOrganizations(zendeskImportRequest.zendeskApiCredentials)
+        val orgCount = zendeskApi.getOrganizationCount(zendeskImportRequest.zendeskApiCredentials)
 
-        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${organizations.count()} organizations found", null)
-        println("organization import process is started for ${organizations.count()} items")
+        zendeskMappingDao.infoLog(operationId, RESOURCE_NAME, "${orgCount} organizations found", null)
+        println("organization import process is started for ${orgCount} items at: ${LocalDateTime.now()}")
 
-        for (zendeskOrganization in organizations) {
-            try {
-                val createOrganizationResponse = grispiApi.createOrganization(
-                    zendeskOrganization.toGrispiOrganizationRequest(),
-                    zendeskImportRequest.grispiApiCredentials
-                )
-                val createdOrganizationId = JsonParser().parse(createOrganizationResponse.bodyRaw(), Long::class.java)
-                zendeskMappingDao.addOrganizationMapping(operationId, zendeskOrganization.id, createdOrganizationId)
+        for (index in 1..(BigDecimal(orgCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt())) {
+            println("fetching ${index}. page")
 
-                zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "{${zendeskOrganization.name}} created successfully", null)
-            } catch (exception: RuntimeException) {
-                when (exception) {
-                    is GrispiApiException -> {
-                        zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
-                            "{${zendeskOrganization.name} with id: ${zendeskOrganization.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
-                            null)
-                    }
-                    else -> {
-                        zendeskMappingDao.errorLog(operationId, TicketImportService.RESOURCE_NAME,
-                            "{${zendeskOrganization.name} with id: ${zendeskOrganization.id}} couldn't be imported. ${exception.message}",
-                            null)
+            val organizations = zendeskApi.getOrganizations(zendeskImportRequest.zendeskApiCredentials, ZendeskPageParams(index, PAGE_SIZE))
+
+            for (zendeskOrganization in organizations) {
+                try {
+                    val createOrganizationResponse = grispiApi.createOrganization(
+                        zendeskOrganization.toGrispiOrganizationRequest(),
+                        zendeskImportRequest.grispiApiCredentials
+                    )
+                    val createdOrganizationId =
+                        JsonParser().parse(createOrganizationResponse.bodyRaw(), Long::class.java)
+                    zendeskMappingDao.addOrganizationMapping(operationId, zendeskOrganization.id, createdOrganizationId)
+
+                    zendeskMappingDao.successLog(operationId,
+                        RESOURCE_NAME,
+                        "{${zendeskOrganization.name}} created successfully",
+                        null)
+                } catch (exception: RuntimeException) {
+                    when (exception) {
+                        is GrispiApiException -> {
+                            zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+                                "{${zendeskOrganization.name} with id: ${zendeskOrganization.id}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
+                                null)
+                        }
+                        else -> {
+                            zendeskMappingDao.errorLog(operationId, TicketImportService.RESOURCE_NAME,
+                                "{${zendeskOrganization.name} with id: ${zendeskOrganization.id}} couldn't be imported. ${exception.message}",
+                                null)
+                        }
                     }
                 }
             }

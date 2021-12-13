@@ -63,8 +63,29 @@ class GrispiTicketFieldRequest(
             )
         }
 
+        /**
+         * this custom field is to keep zendesk brand id.
+         */
+        fun buildZendeskBrandIdCustomField(): GrispiTicketFieldRequest {
+            val key = ZENDESK_BRAND_ID_CUSTOM_FIELD
+            val name = "Zendesk Brand Id"
+            val type = FieldType.TEXT
+            val descriptionForAgents = "zendesk brand id"
+            val descriptionForEndUsers = ""
+            val titleForAgents = "zendesk brand id"
+            val titleForEndUsers = ""
+            val required = RequiredStatus.NOT_REQUIRED
+            val permission = FieldPermissions.AGENT_ONLY
+            val attributes = emptyList<String>()
+            val options = null
+            return GrispiTicketFieldRequest(
+                key, name, type, descriptionForAgents, descriptionForEndUsers, titleForAgents, titleForEndUsers, required, permission, attributes, options
+            )
+        }
+
         companion object {
             val ZENDESK_ID_CUSTOM_FIELD = "tiz.zendesk_id"
+            val ZENDESK_BRAND_ID_CUSTOM_FIELD = "tiz.zendesk_brand_id"
         }
     }
 
