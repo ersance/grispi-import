@@ -1,0 +1,91 @@
+package com.grispi.grispiimport.grispi
+
+import com.grispi.grispiimport.zendesk.*
+import com.grispi.grispiimport.zendesk.ticketfield.ZendeskTicketFieldRepository
+import jodd.json.JsonParser
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Pageable
+import org.springframework.stereotype.Service
+import java.time.LocalDateTime
+
+@Service
+class GrispiTicketFieldImportService(
+    @Autowired val grispiApi: GrispiApi,
+    @Autowired val zendeskMappingRepository: ZendeskMappingRepository,
+    @Autowired val zendeskLogRepository: ZendeskLogRepository,
+    @Autowired val zendeskTicketFieldRepository: ZendeskTicketFieldRepository,
+) {
+
+    companion object {
+        const val RESOURCE_NAME = "ticket_field"
+        const val PAGE_SIZE = 1000
+    }
+
+    fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
+        var ticketFields = zendeskTicketFieldRepository.findAllByOperationId(operationId, Pageable.ofSize(PAGE_SIZE))
+
+        println("ticket field import process is started for ${ticketFields.totalElements} tickets at: ${LocalDateTime.now()}")
+
+        do {
+            println("fetching ${ticketFields.pageable.pageNumber}. page")
+            for (ticketField in ticketFields.content) {
+                try {
+                    val createTicketFieldResponse = grispiApi.createTicketField(ticketField.toGrispiTicketFieldRequest(), grispiApiCredentials)
+
+                    zendeskMappingRepository.save(ZendeskMapping(null, ticketField.id, createTicketFieldResponse.bodyText(), RESOURCE_NAME, operationId))
+
+                    zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS, RESOURCE_NAME, "{${ticketField.id}} created successfully", operationId))
+                } catch (exception: RuntimeException) {
+                    when (exception) {
+                        is GrispiApiException -> {
+                            zendeskLogRepository.save(
+                                ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                                    "{${ticketField.title}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
+                                    operationId))
+                        }
+                        else -> {
+                            zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                                "{${ticketField.title} with id: ${ticketField.id}} couldn't be imported. ${exception.message}",
+                                operationId))
+                        }
+                    }
+                }
+            }
+
+            if (ticketFields.hasNext()) {
+                ticketFields = zendeskTicketFieldRepository.findAllByOperationId(operationId, ticketFields.nextPageable())
+            }
+        } while (ticketFields.hasNext())
+
+        // TODO: 15.12.2021
+        // create zendesk id custom field
+//            try {
+//                val createCustomFieldResponse = grispiApi.createCustomField(
+//                    GrispiTicketFieldRequest.Builder().buildZendeskIdCustomField(),
+//                    zendeskImportRequest.grispiApiCredentials
+//                )
+//
+//                zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "zendesk id custom field created successfully", null)
+//            } catch (exception: GrispiApiException) {
+//                zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+//                    "zendesk id custom field couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
+//                    null)
+//            }
+//
+//            // create zendesk brand id custom field
+//            try {
+//                val createCustomFieldResponse = grispiApi.createCustomField(
+//                    GrispiTicketFieldRequest.Builder().buildZendeskBrandIdCustomField(),
+//                    zendeskImportRequest.grispiApiCredentials
+//                )
+//
+//                zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "zendesk id custom field created successfully", null)
+//            } catch (exception: GrispiApiException) {
+//                zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
+//                    "zendesk id custom field couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
+//                    null)
+//            }
+
+    }
+
+}

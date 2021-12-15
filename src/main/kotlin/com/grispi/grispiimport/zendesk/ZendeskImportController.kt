@@ -1,64 +1,33 @@
 package com.grispi.grispiimport.zendesk
 
-import com.grispi.grispiimport.common.ImportLogContainer
-import com.grispi.grispiimport.common.ImportLogDao
-import com.grispi.grispiimport.grispi.GrispiUserFieldRequest
+import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.web.bind.annotation.*
-import java.util.*
 
 @RestController
 class ZendeskImportController(
-    @Autowired val organizationImportService: OrganizationImportService,
-    @Autowired val groupImportService: GroupImportService,
-    @Autowired val ticketFieldImportService: TicketFieldImportService,
-    @Autowired val userFieldImportService: UserFieldImportService,
-    @Autowired val userImportService: UserImportService,
-    @Autowired val ticketImportService: TicketImportService,
-    @Autowired val ticketCommentImportService: TicketCommentImportService,
-    @Autowired val importLogDao: ImportLogDao,
-    @Autowired val zendeskMappingDao: ZendeskMappingDao
+    @Autowired val zendeskImportService: ZendeskImportService,
+    @Autowired val zendeskImportRepository: ZendeskImportRepository,
+    @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
 ) {
 
     @PostMapping("/import")
     fun importZendeskResources(@RequestBody zendeskImportRequest: ZendeskImportRequest): ZendeskImportResponse {
 
-        val operationId = "op_id"
+        val zendeskTenantImport = zendeskImportService.import(zendeskImportRequest)
 
-//        zendeskMappingDao.initializeTenant(operationId, zendeskImportRequest.grispiApiCredentials.tenantId)
-//
-//        organizationImportService.import(operationId, zendeskImportRequest)
-//
-//        groupImportService.import(operationId, zendeskImportRequest)
-//
-//        ticketFieldImportService.import(operationId, zendeskImportRequest)
-//
-//        userFieldImportService.import(operationId, zendeskImportRequest)
-//
-//        userImportService.import(operationId, zendeskImportRequest)
+        val fetchResourceCounts = zendeskImportService.fetchResourceCounts(zendeskImportRequest.zendeskApiCredentials)
 
-//        ticketImportService.import(operationId, zendeskImportRequest)
-
-//        ticketCommentImportService.import(operationId, zendeskImportRequest)
-
-        return ZendeskImportResponse(operationId, zendeskMappingDao.getAllLogs(operationId))
+        return ZendeskImportResponse(zendeskTenantImport, fetchResourceCounts)
     }
 
-    @GetMapping("/{tenantId}/imports")
-    fun tenantImports(@PathVariable tenantId: String): Map<String, Any> {
-        return zendeskMappingDao.findByTenantId(tenantId)
-    }
-
-    @GetMapping("/{tenantId}/import-logs")
-    fun importLogs(@PathVariable tenantId: String): ImportLogContainer {
-        return zendeskMappingDao.getAllLogsByTenant(tenantId)
-    }
-
-    @GetMapping("/import-logs")
-    fun importLogsByOperationId(@RequestParam("operation-id") operationId: String): ImportLogContainer {
-        return zendeskMappingDao.getAllLogs(operationId)
+    @GetMapping("/commented_tickets")
+    fun commentedTickets(pageable: Pageable): Page<ZendeskTicket> {
+        return zendeskTicketRepository.findCommentedTickets(pageable)
     }
 
 }
 
-data class ZendeskImportResponse(val operationId: String, val logs: ImportLogContainer)
+data class ZendeskImportResponse(val zendeskTenantImport: ZendeskTenantImport, val resourceCounts: Map<String, Int>)

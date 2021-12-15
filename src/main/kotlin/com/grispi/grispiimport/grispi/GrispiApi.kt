@@ -45,7 +45,7 @@ class GrispiApi {
         return httpResponse
     }
 
-    fun createCustomField(grispiTicketFieldRequest: GrispiTicketFieldRequest, apiCredentials: GrispiApiCredentials): HttpResponse {
+    fun createTicketField(grispiTicketFieldRequest: GrispiTicketFieldRequest, apiCredentials: GrispiApiCredentials): HttpResponse {
         val httpResponse = post(CUSTOM_FIELD_ENDPOINT, grispiTicketFieldRequest.toJson(), apiCredentials)
 
         if (!httpResponse.statusCode().equals(HttpStatus.HTTP_CREATED)) {
