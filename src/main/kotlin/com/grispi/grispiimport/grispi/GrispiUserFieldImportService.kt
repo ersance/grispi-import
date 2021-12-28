@@ -23,7 +23,7 @@ class GrispiUserFieldImportService(
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         var userFields = zendeskUserFieldRepository.findAllByOperationId(operationId, Pageable.ofSize(PAGE_SIZE))
 
-        println("user field import process is started for ${userFields.totalElements} tickets at: ${LocalDateTime.now()}")
+        println("user field import process is started for ${userFields.totalElements} fields at: ${LocalDateTime.now()}")
 
         do {
             println("fetching ${userFields.pageable.pageNumber}. page")
@@ -55,6 +55,21 @@ class GrispiUserFieldImportService(
                 userFields = zendeskUserFieldRepository.findAllByOperationId(operationId, userFields.nextPageable())
             }
         } while (userFields.hasNext())
+
+
+        // create phone number user field
+        try {
+            grispiApi.createUserField(GrispiUserFieldRequest.Builder().buildPhoneNumberField(), grispiApiCredentials)
+
+            zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS,
+                RESOURCE_NAME, "zendesk phone number user field created successfully", operationId))
+        } catch (exception: RuntimeException) {
+            zendeskLogRepository.save(
+                ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                    "zendesk phone number user field couldn't be imported. message: ${exception.message}",
+                    operationId))
+        }
+
     }
 
 }

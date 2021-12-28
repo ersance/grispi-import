@@ -44,10 +44,6 @@ class ZendeskTicket: ZendeskEntity() {
     @JSON(name = "created_at")
     var createdAt: Instant = Instant.now()
 
-//    @JSON(name = "updated_at")
-//    @DateTimeFormat(pattern = "yyyy-MM-dd'T'hh:mm:ssZ")
-//    var updatedAt: Date? = null
-
     @JSON(name = "requester_id")
     var requesterId: Long = -1
 
@@ -94,9 +90,9 @@ class ZendeskTicket: ZendeskEntity() {
     // TODO: 30.11.2021 Creator & requester cannot be null and the users for them should be imported
     fun toTicketRequest(
         getGrispiUserId: KFunction1<Long, String>,
-        getGrispiGroupId: KFunction1<Long, String?>
+        getGrispiGroupId: KFunction1<Long, String?>,
+        getGrispiTicketFormId: KFunction1<Long, String>
     ): TicketRequest {
-
         val grispiAssigneeId = if (assigneeId != null) getGrispiUserId.invoke(assigneeId!!) else null
         val grispiFollowerIds = mutableSetOf<Long>()
         if (followerIds.isNotEmpty()) {
@@ -108,12 +104,12 @@ class ZendeskTicket: ZendeskEntity() {
         }
 
         val grispiGroupId = if (groupId != null) getGrispiGroupId(groupId!!).toString() else null
-        val grispiCreatorId = getGrispiUserId(submitterId).toString()
-        val grispiRequesterId = getGrispiUserId(requesterId).toString()
+        val grispiCreatorId = getGrispiUserId(submitterId)
+        val grispiRequesterId = getGrispiUserId(requesterId)
 
         return TicketRequest.Builder()
             .channel(channel.toGrispiChannel())
-            .formId(ticketFormId)
+            .formId(getGrispiTicketFormId.invoke(ticketFormId).toLong())
             .subject(subject.toString())
             .creator(grispiCreatorId,"null", "null")
             .requester(grispiRequesterId,"null", "null")

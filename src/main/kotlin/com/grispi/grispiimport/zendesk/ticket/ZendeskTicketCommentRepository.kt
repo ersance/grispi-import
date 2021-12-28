@@ -12,5 +12,6 @@ import org.springframework.stereotype.Repository
 interface ZendeskTicketCommentRepository: MongoRepository<ZendeskComment, Long> {
 
     fun findAllByOperationId(@Param("operationId") operationId: String): List<ZendeskComment>
+    fun findAllByOperationIdAndTicketIdIsIn(@Param("operationId") operationId: String, @Param("ticketIds") ticketIds: List<Long>): List<ZendeskComment>
 
 }

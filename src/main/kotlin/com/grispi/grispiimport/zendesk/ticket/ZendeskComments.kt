@@ -13,7 +13,7 @@ import kotlin.reflect.KFunction1
 
 class ZendeskComments {
 
-    @JSON(name = "tickets")
+    @JSON(name = "comments")
     var comments: List<ZendeskComment> = emptyList()
 
 }
@@ -58,7 +58,7 @@ class ZendeskComment: ZendeskEntity() {
         getGrispiTicketKey: KFunction1<Long, String>,
         getGrispiUserId: KFunction1<Long, String>
     ): CommentRequest {
-        val ticketKey = getGrispiTicketKey.invoke(id)
+        val ticketKey = getGrispiTicketKey.invoke(ticketId!!)
         val grispiUserId = getGrispiUserId.invoke(authorId)
         val attachmentRequests = attachments.map { AttachmentRequest(it.url.toString(), it.filename.toString()) }
         return CommentRequest(EmojiParser.parseToAliases(htmlBody), public, ticketKey, createdAt.toString(), CommentCreator(grispiUserId.toLong(), null, null), attachmentRequests)

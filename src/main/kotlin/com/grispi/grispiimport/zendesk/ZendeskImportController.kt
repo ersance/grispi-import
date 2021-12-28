@@ -4,12 +4,13 @@ import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
 class ZendeskImportController(
     @Autowired val zendeskImportService: ZendeskImportService,
-    @Autowired val zendeskImportRepository: ZendeskImportRepository,
     @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
 ) {
 
@@ -18,16 +19,34 @@ class ZendeskImportController(
 
         val zendeskTenantImport = zendeskImportService.import(zendeskImportRequest)
 
-        val fetchResourceCounts = zendeskImportService.fetchResourceCounts(zendeskImportRequest.zendeskApiCredentials)
-
-        return ZendeskImportResponse(zendeskTenantImport, fetchResourceCounts)
+        return ZendeskImportResponse(zendeskTenantImport)
     }
 
-    @GetMapping("/commented_tickets")
-    fun commentedTickets(pageable: Pageable): Page<ZendeskTicket> {
-        return zendeskTicketRepository.findCommentedTickets(pageable)
+    @PostMapping("/fetch")
+    fun fetchById(@RequestBody zendeskImportRequest: ZendeskImportRequest, @RequestParam("operationId") operationId: String?): ResponseEntity<Void> {
+        try {
+            zendeskImportService.fetch(operationId, zendeskImportRequest)
+        }
+        catch (exception: RuntimeException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+        }
+
+        return ResponseEntity.ok().build()
+    }
+
+    @PostMapping("/import/{operationId}")
+    fun importById(@RequestBody zendeskImportRequest: ZendeskImportRequest, @PathVariable operationId: String): ResponseEntity<Void> {
+
+        try {
+            zendeskImportService.import(operationId, zendeskImportRequest)
+        }
+        catch (exception: RuntimeException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+        }
+
+        return ResponseEntity.ok().build()
     }
 
 }
 
-data class ZendeskImportResponse(val zendeskTenantImport: ZendeskTenantImport, val resourceCounts: Map<String, Int>)
+data class ZendeskImportResponse(val zendeskTenantImport: ZendeskTenantImport)

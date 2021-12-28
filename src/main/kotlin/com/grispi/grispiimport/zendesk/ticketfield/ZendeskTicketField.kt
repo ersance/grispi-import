@@ -98,7 +98,7 @@ class ZendeskTicketField: ZendeskEntity() {
     }
 
     companion object {
-        val SYSTEM_FIELDS: Set<String> = setOf("subject", "description", "status", "tickettype", "group", "priority", "assignee")
+        val SYSTEM_FIELDS: Set<String> = setOf("subject", "description", "status", "tickettype", "priority", "assignee")
     }
 
     private fun mapAttributes(): List<String> {

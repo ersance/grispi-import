@@ -9,6 +9,9 @@ import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository;
 
 @Repository
-interface ZendeskUserRepository: MongoRepository<ZendeskUser, String> {
-    fun findAllByOperationId(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskUser>
+interface ZendeskUserRepository: MongoRepository<ZendeskUser, Long> {
+    fun findAllByOperationIdAndActiveTrue(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskUser>
+    fun findAllByOperationIdAndActiveFalse(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskUser>
+    fun countAllByOperationIdAndActiveTrue(@Param("operationId") operationId: String): Int
+    fun countAllByOperationIdAndActiveFalse(@Param("operationId") operationId: String): Int
 }

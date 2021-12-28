@@ -37,6 +37,21 @@ class GrispiUserFieldRequest(
             return GrispiUserFieldRequest(key, name, type, description, descriptionForAgents, titleForAgents, order, attributes, options)
         }
 
+        fun buildPhoneNumberField(): GrispiUserFieldRequest {
+            return GrispiUserFieldRequest(
+                ZENDESK_PHONE_USER_FIELD_KEY,
+                "zendeskPhone",
+                FieldType.TEXT,
+                "zendesk phone number",
+                "zendesk phone number",
+                "zendesk phone number",
+                null, emptyList(), null)
+        }
+
+        companion object {
+            const val ZENDESK_PHONE_USER_FIELD_KEY = "uizg.phone"
+        }
+
     }
 
 }

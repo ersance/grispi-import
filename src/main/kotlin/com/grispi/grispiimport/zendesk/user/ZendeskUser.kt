@@ -1,9 +1,6 @@
 package com.grispi.grispiimport.zendesk
 
-import com.grispi.grispiimport.grispi.Role
-import com.grispi.grispiimport.grispi.TicketRequest
-import com.grispi.grispiimport.grispi.User
-import com.grispi.grispiimport.grispi.UserRequest
+import com.grispi.grispiimport.grispi.*
 import jodd.json.meta.JSON
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
@@ -15,6 +12,9 @@ class ZendeskUser: ZendeskEntity() {
     @Id
     @JSON(name = "id")
     var id: Long = -1
+
+    @JSON(name = "active")
+    var active: Boolean = true
 
     @JSON(name = "name")
     var name: String? = null
@@ -35,11 +35,29 @@ class ZendeskUser: ZendeskEntity() {
     var userFields: Map<String, String> = mapOf()
 
     fun toGrispiUserRequest(): UserRequest {
+        val userFieldSet = mutableSetOf<TicketRequest.FieldFromUi_>()
+        if (PhoneNumberValidator.isValid(phone.toString())) {
+            userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_PHONE_USER_FIELD_KEY, phone))
+        }
+
+        userFields.map { TicketRequest.FieldFromUi_("uiz.${it.key}", it.value) }.toCollection(userFieldSet)
+
         return UserRequest.Builder()
             .email(email ?: generateEmail())
             .password(User.NO_PASSWORD)
             .fullName(name.toString())
             .phone(if (PhoneNumberValidator.isValid(phone.toString())) phone else "null")
+            .role(mapRole())
+            .tags(tags)
+            .tags("zendesk-import")
+            .fields(userFieldSet)
+            .build()
+    }
+
+    fun toGrispiDeletedUserRequest(): DeletedUserRequest {
+        return DeletedUserRequest.DeletedUserBuilder()
+            .externalId(id.toString())
+            .fullName(name.toString())
             .role(mapRole())
             .tags(tags)
             .tags("zendesk-import")
@@ -55,12 +73,8 @@ class ZendeskUser: ZendeskEntity() {
         }
     }
 
-    private fun generateEmail(): String? {
-        return if (phone != null) {
-            "${phone}@example.com"
-        } else {
-            "${System.currentTimeMillis()}@example.com" // TODO
-        }
+    private fun generateEmail(): String {
+        return "${phone?:id}@example.com"
     }
 
 }
@@ -68,6 +82,13 @@ class ZendeskUser: ZendeskEntity() {
 class ZendeskUsers {
 
     @JSON(name = "users")
+    val users: List<ZendeskUser> = emptyList()
+
+}
+
+class ZendeskDeletedUsers {
+
+    @JSON(name = "deleted_users")
     val users: List<ZendeskUser> = emptyList()
 
 }

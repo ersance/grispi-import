@@ -18,13 +18,13 @@ class GrispiOrganizationImportService(
 
     companion object {
         const val RESOURCE_NAME = "organization"
-        const val PAGE_SIZE = 1
+        const val PAGE_SIZE = 1000
     }
 
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         var organizations = zendeskOrganizationRepository.findAllByOperationId(operationId, Pageable.ofSize(PAGE_SIZE))
 
-        println("organization import process is started for ${organizations.totalElements} tickets at: ${LocalDateTime.now()}")
+        println("organization import process is started for ${organizations.totalElements} orgs at: ${LocalDateTime.now()}")
 
         do {
             println("fetching ${organizations.pageable.pageNumber}. page")

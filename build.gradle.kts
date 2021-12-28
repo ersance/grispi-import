@@ -17,6 +17,8 @@ repositories {
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
+	implementation("org.springframework:spring-aop:5.3.14")
+	implementation("org.springframework:spring-aspects:5.3.13")
 	implementation("redis.clients:jedis:3.6.3")
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	implementation("org.springframework.boot:spring-boot-starter-data-mongodb")

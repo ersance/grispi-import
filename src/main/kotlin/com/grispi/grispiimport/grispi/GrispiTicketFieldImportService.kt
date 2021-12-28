@@ -57,34 +57,30 @@ class GrispiTicketFieldImportService(
             }
         } while (ticketFields.hasNext())
 
-        // TODO: 15.12.2021
         // create zendesk id custom field
-//            try {
-//                val createCustomFieldResponse = grispiApi.createCustomField(
-//                    GrispiTicketFieldRequest.Builder().buildZendeskIdCustomField(),
-//                    zendeskImportRequest.grispiApiCredentials
-//                )
-//
-//                zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "zendesk id custom field created successfully", null)
-//            } catch (exception: GrispiApiException) {
-//                zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
-//                    "zendesk id custom field couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
-//                    null)
-//            }
-//
-//            // create zendesk brand id custom field
-//            try {
-//                val createCustomFieldResponse = grispiApi.createCustomField(
-//                    GrispiTicketFieldRequest.Builder().buildZendeskBrandIdCustomField(),
-//                    zendeskImportRequest.grispiApiCredentials
-//                )
-//
-//                zendeskMappingDao.successLog(operationId, RESOURCE_NAME, "zendesk id custom field created successfully", null)
-//            } catch (exception: GrispiApiException) {
-//                zendeskMappingDao.errorLog(operationId, RESOURCE_NAME,
-//                    "zendesk id custom field couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
-//                    null)
-//            }
+        try {
+            grispiApi.createTicketField(GrispiTicketFieldRequest.Builder().buildZendeskIdCustomField(), grispiApiCredentials)
+
+            zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS, RESOURCE_NAME, "zendesk id custom field created successfully", operationId))
+        } catch (exception: RuntimeException) {
+            zendeskLogRepository.save(
+                ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                    "zendesk id custom field couldn't be imported. message: ${exception.message}",
+                    operationId))
+        }
+
+        // create zendesk brand id custom field
+        try {
+            grispiApi.createTicketField(GrispiTicketFieldRequest.Builder().buildZendeskBrandIdCustomField(), grispiApiCredentials)
+
+            zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS, RESOURCE_NAME, "zendesk brand id custom field created successfully", operationId))
+        } catch (exception: RuntimeException) {
+            zendeskLogRepository.save(
+                ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                    "zendesk brand id custom field couldn't be imported. message: ${exception.message}",
+                    operationId))
+        }
+
 
     }
 

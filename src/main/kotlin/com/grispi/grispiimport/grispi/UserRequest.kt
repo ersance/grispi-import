@@ -20,20 +20,22 @@ open class UserRequest private constructor(
     class Builder {
         private var email: String? = null
         private var password: String? = null
+        private var active: Boolean? = false
         private var phone: String? = null
         private var fullName: String? = null
         private var role: String? = null
         private var tags: MutableSet<String> = mutableSetOf()
-        private var fields: Set<TicketRequest.FieldFromUi_>? = setOf()
+        private var fields: MutableSet<TicketRequest.FieldFromUi_> = mutableSetOf()
 
         fun email(email: String?) = apply { this.email = email }
         fun password(password: String) = apply { this.password = password }
+        fun active(active: Boolean?) = apply { this.active = active }
         fun phone(phone: String?) = apply { this.phone = phone }
         fun fullName(fullName: String) = apply { this.fullName = fullName }
         fun role(role: Role) = apply { this.role = role.authority }
         fun tags(vararg tags: String) = apply { this.tags.addAll(tags.toSet()) }
         fun tags(tags: Set<String>) = apply { this.tags.addAll(tags) }
-        fun fields(fields: Set<TicketRequest.FieldFromUi_>?) = apply { this.fields = fields }
+        fun fields(fields: MutableSet<TicketRequest.FieldFromUi_>) = apply { this.fields.addAll(fields) }
 
         fun build(): UserRequest {
             return UserRequest(email, password, phone, fullName, role, tags, fields)
@@ -75,4 +77,38 @@ open class UserRequest private constructor(
         tags = userRequest.tags,
         fields = userRequest.fields
     )
+}
+
+open class DeletedUserRequest private constructor(
+    val externalId: String?,
+    val fullName: String?,
+    val role: String?,
+    val tags: Set<String>?,
+    val fields: Set<TicketRequest.FieldFromUi_>?
+): GrispiApiRequest() {
+
+    class DeletedUserBuilder {
+        private var externalId: String? = null
+        private var fullName: String? = null
+        private var role: String? = null
+        private var tags: MutableSet<String> = mutableSetOf()
+        private var fields: Set<TicketRequest.FieldFromUi_>? = setOf()
+
+        fun externalId(externalId: String) = apply { this.externalId = externalId }
+        fun fullName(fullName: String) = apply { this.fullName = fullName }
+        fun role(role: Role) = apply { this.role = role.authority }
+        fun tags(vararg tags: String) = apply { this.tags.addAll(tags.toSet()) }
+        fun tags(tags: Set<String>) = apply { this.tags.addAll(tags) }
+        fun fields(fields: Set<TicketRequest.FieldFromUi_>?) = apply { this.fields = fields }
+
+        fun build(): DeletedUserRequest {
+            return DeletedUserRequest(externalId, fullName, role, tags, fields)
+        }
+
+        fun toJson(): String {
+            val userRequest = build()
+            return userRequest.toJson()
+        }
+    }
+
 }
