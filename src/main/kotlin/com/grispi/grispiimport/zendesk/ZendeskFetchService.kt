@@ -11,6 +11,7 @@ import com.grispi.grispiimport.zendesk.ticketform.ZendeskTicketFormService
 import com.grispi.grispiimport.zendesk.user.ZendeskUserService
 import com.grispi.grispiimport.zendesk.userfield.ZendeskUserFieldService
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Stream
@@ -46,6 +47,7 @@ class ZendeskFetchService(
 
     @CalculateTimeSpent
     fun fetchResources(operationId: String, zendeskApiCredentials: ZendeskApiCredentials) {
+        MDC.put("operationId", operationId)
         zendeskOrganizationService.fetch(operationId, zendeskApiCredentials)
         zendeskGroupService.fetch(operationId, zendeskApiCredentials)
         zendeskTicketFieldService.fetch(operationId, zendeskApiCredentials)

@@ -23,13 +23,13 @@
 
     <appender name="SIFT" class="ch.qos.logback.classic.sift.SiftingAppender">
         <discriminator>
-            <key>tenantId</key>
+            <key>operationId</key>
             <defaultValue>app</defaultValue>
         </discriminator>
 
         <sift>
-            <appender name="TENANT-${tenantId}" class="ch.qos.logback.core.FileAppender">
-                <file>logs/${tenantId}.log</file>
+            <appender name="TENANT-${operationId}" class="ch.qos.logback.core.FileAppender">
+                <file>logs/${operationId}.log</file>
                 <append>true</append>
                 <layout class="ch.qos.logback.classic.PatternLayout">
                     <pattern>%cyan(%d{HH:mm:ss.SSS}) %highlight(%-5level) %gray([%thread]) %magenta(%logger{36}) - %msg%n</pattern>

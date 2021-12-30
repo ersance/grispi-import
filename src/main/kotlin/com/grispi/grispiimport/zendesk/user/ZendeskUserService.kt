@@ -6,6 +6,7 @@ import com.grispi.grispiimport.zendesk.ZendeskApi.Companion.PAGE_SIZE
 import com.grispi.grispiimport.zendesk.organization.ResourceCount
 import com.grispi.grispiimport.zendesk.organization.ZendeskOrganizationService
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.mongodb.repository.MongoRepository
@@ -60,7 +61,10 @@ class ZendeskUserService(
             zendeskApi
                 .getUsers(zendeskApiCredentials, ZendeskPageParams(index, PAGE_SIZE), this::save)
                 .thenApply { users -> save(users, operationId) }
-                .thenRun { logger.info("users imported for page: ${index}") }
+                .thenRun {
+                    MDC.put("operationId", operationId)
+                    logger.info("users imported for page: ${index}")
+                }
         }
     }
 
@@ -85,7 +89,10 @@ class ZendeskUserService(
             zendeskApi
                 .getDeletedUsers(zendeskApiCredentials, ZendeskPageParams(index, PAGE_SIZE), this::save)
                 .thenApply { users -> save(users, operationId) }
-                .thenRun { logger.info("deleted users imported for page: ${index}") }
+                .thenRun {
+                    MDC.put("operationId", operationId)
+                    logger.info("deleted users imported for page: ${index}")
+                }
         }
     }
 

@@ -12,6 +12,7 @@ import jodd.http.HttpRequest
 import jodd.http.HttpResponse
 import jodd.json.JsonParser
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -152,16 +153,22 @@ class ZendeskApi(
             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .sendAsync()
             .thenApply { response ->
+                MDC.put("operationId", apiCredentials.operationId)
                 val header = response.header("Retry-After")
                 if (StringUtils.hasText(header)) {
                     logger.info("Retry after header is $header")
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
+                            MDC.put("operationId", apiCredentials.operationId)
                             logger.info("waited for ${header.toLong()} seconds for users... reseting limit")
                             apiLimitWatcher.resetLimitFor(apiCredentials.operationId)
                             getUsers(apiCredentials, zendeskPageParams, saveUsers)
                                 .thenApply { users -> saveUsers.invoke(users, apiCredentials.operationId) }
+                                .thenApply { users ->
+                                    MDC.put("operationId", apiCredentials.operationId)
+                                    logger.info("${users?.count()} users saved by SCHEDULED")
+                                }
                         }, header.toLong(), TimeUnit.SECONDS)
 
                     return@thenApply emptyList()
@@ -185,16 +192,22 @@ class ZendeskApi(
             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .sendAsync()
             .thenApply { response ->
+                MDC.put("operationId", apiCredentials.operationId)
                 val header = response.header("Retry-After")
                 if (StringUtils.hasText(header)) {
                     logger.info("Retry after header is $header")
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
+                            MDC.put("operationId", apiCredentials.operationId)
                             logger.info("waited for ${header.toLong()} seconds for users... reseting limit")
                             apiLimitWatcher.resetLimitFor(apiCredentials.operationId)
                             getUsers(apiCredentials, zendeskPageParams, saveUsers)
                                 .thenApply { users -> saveUsers.invoke(users, apiCredentials.operationId) }
+                                .thenApply { users ->
+                                    MDC.put("operationId", apiCredentials.operationId)
+                                    logger.info("${users?.count()} users saved by SCHEDULED")
+                                }
                         }, header.toLong(), TimeUnit.SECONDS)
 
                     return@thenApply emptyList()
@@ -234,16 +247,22 @@ class ZendeskApi(
             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .sendAsync()
             .thenApply { response ->
+                MDC.put("operationId", apiCredentials.operationId)
                 val header = response.header("Retry-After")
                 if (StringUtils.hasText(header)) {
                     logger.info("Retry after header is $header. waiting $header seconds...")
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
+                            MDC.put("operationId", apiCredentials.operationId)
                             logger.info("waited for ${header.toLong()} seconds for tickets... reseting limit")
                             apiLimitWatcher.resetLimitFor(apiCredentials.operationId)
                             getTickets(apiCredentials, zendeskPageParams, saveTickets)
                                 .thenApply { tickets -> saveTickets(tickets, apiCredentials.operationId) }
+                                .thenApply { tickets ->
+                                    MDC.put("operationId", apiCredentials.operationId)
+                                    logger.info("${tickets.count()} tickets saved by SCHEDULED")
+                                }
                         }, header.toLong(), TimeUnit.SECONDS)
 
                     return@thenApply emptyList()
@@ -272,18 +291,22 @@ class ZendeskApi(
             .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .sendAsync()
             .thenApply { response ->
+                MDC.put("operationId", apiCredentials.operationId)
                 val header = response.header("Retry-After")
-
                 if (StringUtils.hasText(header)) {
                     commentMapRepository.save(CommentMap(ticketId, waiting = true))
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
+                            MDC.put("operationId", apiCredentials.operationId)
                             logger.info("waited for ${header.toLong()} seconds for ticket comments... reseting limit")
                             apiLimitWatcher.resetLimitFor(apiCredentials.operationId)
                             getTicketComments(ticketId, apiCredentials, kFunction3)
                                 .thenApply { comments -> kFunction3.invoke(comments, apiCredentials.operationId, ticketId) }
-                                .thenApply { comments -> logger.info("${comments.count()} comments saved by SCHEDULED") }
+                                .thenApply { comments ->
+                                    MDC.put("operationId", apiCredentials.operationId)
+                                    logger.info("${comments.count()} comments saved by SCHEDULED")
+                                }
                         }, header.toLong(), TimeUnit.SECONDS)
 
                     return@thenApply emptyList()

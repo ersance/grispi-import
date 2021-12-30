@@ -4,6 +4,7 @@ import com.grispi.grispiimport.utils.CalculateTimeSpent
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketCommentRepository
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -24,6 +25,7 @@ class GrispiImportService(
 
     @CalculateTimeSpent
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
+        MDC.put("operationId", operationId)
         logger.info("grispi import started for tenant: {${grispiApiCredentials.tenantId}} with operation id: $operationId")
 
         organizationService.import(operationId, grispiApiCredentials)
