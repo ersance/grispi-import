@@ -8,7 +8,7 @@ import java.time.Instant
 @Component
 class ZendeskDateConverter : ValueConverter<String, Instant> {
 
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss");
 
     override fun convert(source: String?): Instant {
         try {

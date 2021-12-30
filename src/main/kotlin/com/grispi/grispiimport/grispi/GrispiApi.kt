@@ -6,6 +6,7 @@ import jodd.http.HttpStatus
 import jodd.json.JsonException
 import jodd.json.JsonParser
 import jodd.json.JsonSerializer
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -14,6 +15,8 @@ import java.util.concurrent.CompletableFuture
 
 @Service
 class GrispiApi {
+
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     companion object {
         const val HOST: String = "http://grispi.com:8080"
@@ -93,7 +96,7 @@ class GrispiApi {
                         throw GrispiUserConflictedException(errorMessageInBody)
                     }
                     catch (ex: JsonException) {
-                        println(response.bodyText())
+                        logger.info(response.bodyText())
                         throw GrispiUserConflictedException(response.bodyText())
                     }
                 }
@@ -116,7 +119,7 @@ class GrispiApi {
                         throw GrispiUserConflictedException(errorMessageInBody.toString())
                     }
                     catch (ex: JsonException) {
-                        println(response.bodyText())
+                        logger.info(response.bodyText())
                         throw GrispiUserConflictedException(response.bodyText())
                     }
                 }

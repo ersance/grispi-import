@@ -1,6 +1,8 @@
 package com.grispi.grispiimport.zendesk
 
+import com.grispi.grispiimport.zendesk.organization.ResourceCount
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
+import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -17,9 +19,16 @@ class ZendeskImportController(
     @PostMapping("/import")
     fun importZendeskResources(@RequestBody zendeskImportRequest: ZendeskImportRequest): ZendeskImportResponse {
 
+        MDC.put("tenantId", zendeskImportRequest.grispiApiCredentials.tenantId)
+
         val zendeskTenantImport = zendeskImportService.import(zendeskImportRequest)
 
         return ZendeskImportResponse(zendeskTenantImport)
+    }
+
+    @GetMapping("/import/{operationId}/status")
+    fun importStatus(@PathVariable operationId: String, @RequestBody zendeskImportRequest: ZendeskImportRequest): ResponseEntity<ZendeskImportStatusResponse> {
+        return ResponseEntity.ok(zendeskImportService.checkStatus(operationId, zendeskImportRequest.zendeskApiCredentials))
     }
 
     @PostMapping("/fetch")
@@ -50,3 +59,4 @@ class ZendeskImportController(
 }
 
 data class ZendeskImportResponse(val zendeskTenantImport: ZendeskTenantImport)
+data class ZendeskImportStatusResponse(val grispiTenantId: String, val zendeskTenantId: String, val createdAt: Long, val resources: List<ResourceCount>)

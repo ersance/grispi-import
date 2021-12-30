@@ -1,0 +1,62 @@
+<configuration>
+
+    <!--  todo: revert logging  -->
+<!--    <property name="IMPORT_LOG" value="logs/app.log"/>-->
+
+<!--    <appender name="FILE-ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
+<!--        <file>${IMPORT_LOG}</file>-->
+
+<!--        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">-->
+<!--            <fileNamePattern>logs/archived/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>-->
+<!--            &lt;!&ndash; each archived file, size max 10MB &ndash;&gt;-->
+<!--            <maxFileSize>100MB</maxFileSize>-->
+<!--            &lt;!&ndash; total size of all archive files, if total size > 20GB, it will delete old archived file &ndash;&gt;-->
+<!--            <totalSizeCap>20GB</totalSizeCap>-->
+<!--            &lt;!&ndash; 60 days to keep &ndash;&gt;-->
+<!--            <maxHistory>60</maxHistory>-->
+<!--        </rollingPolicy>-->
+
+<!--        <encoder>-->
+<!--            <pattern>%cyan(%d{HH:mm:ss.SSS}) %gray([%thread]) %highlight(%-5level) %magenta(%logger{36}) - %msg%n</pattern>-->
+<!--        </encoder>-->
+<!--    </appender>-->
+
+    <appender name="SIFT" class="ch.qos.logback.classic.sift.SiftingAppender">
+        <discriminator>
+            <key>tenantId</key>
+            <defaultValue>app</defaultValue>
+        </discriminator>
+
+        <sift>
+            <appender name="TENANT-${tenantId}" class="ch.qos.logback.core.FileAppender">
+                <file>logs/${tenantId}.log</file>
+                <append>true</append>
+                <layout class="ch.qos.logback.classic.PatternLayout">
+                    <pattern>%cyan(%d{HH:mm:ss.SSS}) %highlight(%-5level) %gray([%thread]) %magenta(%logger{36}) - %msg%n</pattern>
+                </layout>
+            </appender>
+        </sift>
+    </appender>
+
+<!--    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">-->
+<!--        <withJansi>true</withJansi>-->
+<!--        &lt;!&ndash; encoders are assigned the type-->
+<!--             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default &ndash;&gt;-->
+<!--        <encoder>-->
+<!--            <pattern>%cyan(%d{HH:mm:ss.SSS}) %highlight(%-5level) %gray([%thread]) %magenta(%logger{36}) - %msg%n</pattern>-->
+<!--        </encoder>-->
+<!--    </appender>-->
+
+    <!--<logger name="io.micronaut.data.query" level="trace" />-->
+    <!--<logger name="org.hibernate.type.descriptor.sql" level="trace" />-->
+    <!--<logger name="org.hibernate.type.BasicTypeRegistry" level="trace" />-->
+    <!--<logger name="io.micronaut.core.reflect" level="trace" />-->
+    <!--<logger name="io.micronaut.security" level="trace" />-->
+    <!--<logger name="com.grispi" level="trace" />-->
+
+    <root level="INFO">
+<!--        <appender-ref ref="STDOUT" />-->
+        <!--        <appender-ref ref="FILE-ROLLING" />-->
+                <appender-ref ref="SIFT" />
+    </root>
+</configuration>

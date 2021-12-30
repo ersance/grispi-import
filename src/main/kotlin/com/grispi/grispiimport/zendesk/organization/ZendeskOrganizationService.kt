@@ -3,15 +3,20 @@ package com.grispi.grispiimport.zendesk.organization
 import com.grispi.grispiimport.utils.CalculateTimeSpent
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.ZendeskApi.Companion.PAGE_SIZE
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.mongodb.repository.MongoRepository
+import org.springframework.data.repository.query.Param
+import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.time.LocalDateTime
+import java.util.concurrent.CompletableFuture
 
 @Service
 class ZendeskOrganizationService(
     private val zendeskApi: ZendeskApi,
-    private val zendeskOrganizationRepository: ZendeskOrganizationRepository
+    private val zendeskOrganizationRepository: ZendeskOrganizationRepository,
 ) {
 
     companion object {
@@ -31,4 +36,25 @@ class ZendeskOrganizationService(
         }
     }
 
+    fun fetchedOrganizationsCount(operationId: String): Long {
+        return zendeskOrganizationRepository.countAllByOperationId(operationId)
+    }
+
+    fun counts(operationId: String, zendeskApiCredentials: ZendeskApiCredentials): ResourceCount {
+        return CompletableFuture
+            .supplyAsync { zendeskApi.getOrganizationCount(zendeskApiCredentials) }
+            .thenCombine(
+                CompletableFuture.supplyAsync { fetchedOrganizationsCount(operationId) },
+                { zCount, fCount -> ResourceCount(RESOURCE_NAME, zCount, fCount) })
+            .get()
+    }
+
+}
+
+data class ResourceCount(val resource: String, val expected: Long?, val fetched: Long?)
+
+@Repository
+interface ZendeskOrganizationRepository: MongoRepository<ZendeskOrganization, Long> {
+    fun findAllByOperationId(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskOrganization>
+    fun countAllByOperationId(@Param("operationId") operationId: String): Long
 }

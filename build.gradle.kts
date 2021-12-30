@@ -26,6 +26,7 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jodd:jodd-json:6.0.3")
+	runtimeOnly("ch.qos.logback:logback-classic")
 	implementation("com.vdurmont:emoji-java:5.1.1")
 	implementation("com.googlecode.libphonenumber:libphonenumber:8.12.25")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")

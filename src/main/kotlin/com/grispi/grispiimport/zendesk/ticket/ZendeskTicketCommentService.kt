@@ -1,15 +1,18 @@
 package com.grispi.grispiimport.zendesk.ticket
 
-import com.grispi.grispiimport.grispi.GrispiApi
 import com.grispi.grispiimport.zendesk.*
+import com.grispi.grispiimport.zendesk.organization.ResourceCount
+import org.slf4j.LoggerFactory
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.mongodb.repository.MongoRepository
+import org.springframework.data.repository.query.Param
+import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import java.util.stream.Collectors
 
 @Service
 class ZendeskTicketCommentService(
@@ -20,15 +23,17 @@ class ZendeskTicketCommentService(
     private val commentMapRepository: CommentMapRepository,
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     companion object {
         const val RESOURCE_NAME = "comment"
         const val PAGE_SIZE = 1000
     }
 
     fun fetch(operationId: String, zendeskApiCredentials: ZendeskApiCredentials, startingFrom: Int? = 0) {
-        val commentedTicketsCount = ticketRepository.getCommentedTicketsCount()
+        val commentedTicketsCount = ticketRepository.findCommentedTicketCount(operationId)
 
-        println("ticket comment fetch process is started for ${commentedTicketsCount} tickets at: ${LocalDateTime.now()}")
+        logger.info("ticket comment fetch process is started for ${commentedTicketsCount} tickets at: ${LocalDateTime.now()}")
 
         val to = BigDecimal(commentedTicketsCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt()
         for (index in (startingFrom)!!.rangeTo(to)) {
@@ -38,7 +43,7 @@ class ZendeskTicketCommentService(
                 if (apiLimitWatcher.isApiUnavailable(operationId)) {
                     commentMapRepository.save(CommentMap(ticket.id, apiAvailable = false))
                     val retryAfterFor = apiLimitWatcher.getRetryAfterFor(operationId)
-                    println("sleeping user thread for ${retryAfterFor} page ${index}")
+                    logger.info("sleeping user thread for ${retryAfterFor} page ${index}")
                     CompletableFuture.supplyAsync(
                         { fetch(operationId, zendeskApiCredentials, index) },
                         CompletableFuture.delayedExecutor(retryAfterFor, TimeUnit.SECONDS)
@@ -58,18 +63,18 @@ class ZendeskTicketCommentService(
 
             }
 
-            println("ticket comments fetched for page: ${index}")
+            logger.info("ticket comments fetched for page: ${index}")
         }
     }
 
     fun save(comments: List<ZendeskComment>, operationId: String, ticketId: Long): List<ZendeskComment> {
 
         if (comments.isEmpty()) {
-            println("no comment found. ")
+            logger.info("no comment found. ")
             return emptyList()
         }
         else {
-            println("${comments.count()} comments fetched")
+            logger.info("${comments.count()} comments fetched")
         }
 
         comments.forEach {
@@ -79,5 +84,27 @@ class ZendeskTicketCommentService(
 
         return ticketCommentRepository.saveAll(comments)
     }
+
+    fun fetchedCommentsCount(operationId: String): Long {
+        return ticketCommentRepository.countAllByOperationId(operationId)
+    }
+
+    fun counts(operationId: String): ResourceCount {
+        return CompletableFuture
+            .supplyAsync { ticketRepository.calculateCommentCountByOperationId(operationId).uniqueMappedResult?.total() }
+            .thenCombine(
+                CompletableFuture.supplyAsync { fetchedCommentsCount(operationId) },
+                { zCount, fCount -> ResourceCount(RESOURCE_NAME, zCount, fCount) })
+            .get()
+    }
+
+}
+
+@Repository
+interface ZendeskTicketCommentRepository: MongoRepository<ZendeskComment, Long> {
+
+    fun findAllByOperationId(@Param("operationId") operationId: String): List<ZendeskComment>
+    fun findAllByOperationIdAndTicketIdIsIn(@Param("operationId") operationId: String, @Param("ticketIds") ticketIds: List<Long>): List<ZendeskComment>
+    fun countAllByOperationId(operationId: String): Long
 
 }

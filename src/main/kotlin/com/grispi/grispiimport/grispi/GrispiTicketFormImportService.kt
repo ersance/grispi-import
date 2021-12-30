@@ -2,6 +2,7 @@ package com.grispi.grispiimport.grispi
 
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.ticketform.ZendeskTicketFormRepository
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -16,6 +17,8 @@ class GrispiTicketFormImportService(
     @Autowired val zendeskTicketFormRepository: ZendeskTicketFormRepository,
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     companion object {
         const val RESOURCE_NAME = "ticket_form"
         const val PAGE_SIZE = 1000
@@ -24,10 +27,9 @@ class GrispiTicketFormImportService(
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         var ticketForms = zendeskTicketFormRepository.findAllByOperationId(operationId, Pageable.ofSize(PAGE_SIZE))
 
-        println("ticket form import process is started for ${ticketForms.totalElements} items at: ${LocalDateTime.now()}")
+        logger.info("ticket form import process is started for ${ticketForms.totalElements} items at: ${LocalDateTime.now()}")
 
         do {
-            println("fetching ${ticketForms.pageable.pageNumber}. page")
             for (ticketForm in ticketForms.content) {
                 try {
                     val ticketFormResponse = grispiApi.createTicketForm(ticketForm.toGrispiTicketFormRequest(zendeskMappingQueryRepository::findGrispiTicketFieldKey), grispiApiCredentials)
@@ -56,6 +58,8 @@ class GrispiTicketFormImportService(
                 ticketForms = zendeskTicketFormRepository.findAllByOperationId(operationId, ticketForms.nextPageable())
             }
         } while (ticketForms.hasNext())
+
+        logger.info("ticket form import process has ended for ${ticketForms.totalElements} ticket forms at: ${LocalDateTime.now()}")
     }
 
 }

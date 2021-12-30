@@ -1,6 +1,7 @@
 package com.grispi.grispiimport.zendesk
 
 import com.grispi.grispiimport.grispi.*
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.MongoTemplate
@@ -18,6 +19,8 @@ class ZendeskMappingQueryRepository(
     private val mongoTemplate: MongoTemplate,
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     fun findGrispiUserId(zendeskId: Long): String {
         val query = Query()
         query.addCriteria(Criteria.where("zendeskId").`is`(zendeskId).and("resourceName").`is`(GrispiUserImportService.RESOURCE_NAME))
@@ -26,7 +29,7 @@ class ZendeskMappingQueryRepository(
             return zendeskMapping.grispiId
         }
         else {
-            println("grispi user not found: $zendeskId")
+            logger.warn("grispi user not found: $zendeskId")
             throw GrispiReferenceNotFoundException(zendeskId, GrispiUserImportService.RESOURCE_NAME)
         }
     }
@@ -46,7 +49,7 @@ class ZendeskMappingQueryRepository(
             return zendeskMapping.grispiId
         }
         else {
-            println("grispi ticket not found: $zendeskId")
+            logger.warn("grispi ticket not found: $zendeskId")
             throw GrispiReferenceNotFoundException(zendeskId, GrispiTicketImportService.RESOURCE_NAME)
         }
     }
@@ -73,7 +76,7 @@ class ZendeskMappingQueryRepository(
             return zendeskMapping.grispiId
         }
         else {
-            println("grispi ticket form not found: $zendeskId")
+            logger.warn("grispi ticket form not found: $zendeskId")
             throw GrispiReferenceNotFoundException(zendeskId, GrispiTicketFormImportService.RESOURCE_NAME)
         }
     }

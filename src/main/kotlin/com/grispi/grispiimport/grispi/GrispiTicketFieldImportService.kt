@@ -3,6 +3,7 @@ package com.grispi.grispiimport.grispi
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.ticketfield.ZendeskTicketFieldRepository
 import jodd.json.JsonParser
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -16,6 +17,8 @@ class GrispiTicketFieldImportService(
     @Autowired val zendeskTicketFieldRepository: ZendeskTicketFieldRepository,
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     companion object {
         const val RESOURCE_NAME = "ticket_field"
         const val PAGE_SIZE = 1000
@@ -24,10 +27,9 @@ class GrispiTicketFieldImportService(
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         var ticketFields = zendeskTicketFieldRepository.findAllByOperationId(operationId, Pageable.ofSize(PAGE_SIZE))
 
-        println("ticket field import process is started for ${ticketFields.totalElements} tickets at: ${LocalDateTime.now()}")
+        logger.info("ticket field import process is started for ${ticketFields.totalElements} tickets at: ${LocalDateTime.now()}")
 
         do {
-            println("fetching ${ticketFields.pageable.pageNumber}. page")
             for (ticketField in ticketFields.content) {
                 try {
                     val createTicketFieldResponse = grispiApi.createTicketField(ticketField.toGrispiTicketFieldRequest(), grispiApiCredentials)
@@ -81,7 +83,7 @@ class GrispiTicketFieldImportService(
                     operationId))
         }
 
-
+        logger.info("ticket field import process has ended for ${ticketFields.totalElements} ticket fields at: ${LocalDateTime.now()}")
     }
 
 }

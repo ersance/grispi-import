@@ -3,6 +3,7 @@ package com.grispi.grispiimport.grispi
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketCommentRepository
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -17,6 +18,8 @@ class GrispiTicketCommentImportService(
     @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     companion object {
         const val RESOURCE_NAME = "comment"
         const val PAGE_SIZE = 1000
@@ -29,11 +32,10 @@ class GrispiTicketCommentImportService(
             .findAllByOperationIdAndTicketIdIsIn(operationId, commentedTicketIdsForBrand.stream().map { it.id }.toList())
             .groupBy { it.ticketId }
 
-        println("missing ids: ${commentedTicketIdsForBrand.stream().filter { !groupedComments.keys.contains(it.id) }.toList()}")
+        logger.info("missing ids: ${commentedTicketIdsForBrand.stream().filter { !groupedComments.keys.contains(it.id) }.toList()}")
 
-        println("ticket comment import process is started for ${groupedComments.count()} tickets at: ${LocalDateTime.now()}")
+        logger.info("ticket comment import process is started for ${groupedComments.count()} tickets at: ${LocalDateTime.now()}")
         for (commentRequest in groupedComments.entries) {
-            println("comments for ${commentRequest.key} ")
             try {
                 val comments = commentRequest.value.stream()
                     .map { it.toCommentRequest(zendeskMappingQueryRepository::findGrispiTicketKey, zendeskMappingQueryRepository::findGrispiUserId) }
@@ -58,6 +60,7 @@ class GrispiTicketCommentImportService(
                 }
             }
         }
+        logger.info("ticket comment import process has ended for ${groupedComments.count()} tickets at: ${LocalDateTime.now()}")
     }
 
 }

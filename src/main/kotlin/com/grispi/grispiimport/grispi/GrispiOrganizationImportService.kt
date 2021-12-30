@@ -3,6 +3,7 @@ package com.grispi.grispiimport.grispi
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.organization.ZendeskOrganizationRepository
 import jodd.json.JsonParser
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -16,6 +17,8 @@ class GrispiOrganizationImportService(
     @Autowired val zendeskOrganizationRepository: ZendeskOrganizationRepository
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     companion object {
         const val RESOURCE_NAME = "organization"
         const val PAGE_SIZE = 1000
@@ -24,10 +27,9 @@ class GrispiOrganizationImportService(
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         var organizations = zendeskOrganizationRepository.findAllByOperationId(operationId, Pageable.ofSize(PAGE_SIZE))
 
-        println("organization import process is started for ${organizations.totalElements} orgs at: ${LocalDateTime.now()}")
+        logger.info("organization import process is started for ${organizations.totalElements} organizations at: ${LocalDateTime.now()}")
 
         do {
-            println("fetching ${organizations.pageable.pageNumber}. page")
             for (organization in organizations.content) {
                 try {
                     val createOrganizationResponse = grispiApi.createOrganization(organization.toGrispiOrganizationRequest(), grispiApiCredentials)
@@ -56,6 +58,8 @@ class GrispiOrganizationImportService(
                 organizations = zendeskOrganizationRepository.findAllByOperationId(operationId, organizations.nextPageable())
             }
         } while (organizations.hasNext())
+
+        logger.info("organization import process has ended for ${organizations.totalElements} organizations at: ${LocalDateTime.now()}")
     }
 
 }

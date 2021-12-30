@@ -11,6 +11,7 @@ import com.grispi.grispiimport.zendesk.ticketform.ZendeskTicketForms
 import jodd.http.HttpRequest
 import jodd.http.HttpResponse
 import jodd.json.JsonParser
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -28,6 +29,8 @@ class ZendeskApi(
     private val apiLimitWatcher: ApiLimitWatcher,
     private val commentMapRepository: CommentMapRepository
 ) {
+
+    private val logger = LoggerFactory.getLogger(javaClass)
 
     companion object {
         const val HOST: String = "zendesk.com/api/v2"
@@ -47,7 +50,7 @@ class ZendeskApi(
     }
 
     // ORGANIZATIONS
-    fun getOrganizationCount(apiCredentials: ZendeskApiCredentials): Int {
+    fun getOrganizationCount(apiCredentials: ZendeskApiCredentials): Long {
         return getResourceCount("${ORGANIZATIONS_ENDPOINT}/count", apiCredentials)
     }
 
@@ -78,7 +81,7 @@ class ZendeskApi(
             .groups
     }
 
-    fun getGroupCount(apiCredentials: ZendeskApiCredentials): Int {
+    fun getGroupCount(apiCredentials: ZendeskApiCredentials): Long {
         return getResourceCount("${GROUPS_ENDPOINT}/count", apiCredentials)
     }
 
@@ -95,7 +98,7 @@ class ZendeskApi(
             .ticketFields
     }
 
-    fun getTicketFieldCount(apiCredentials: ZendeskApiCredentials): Int {
+    fun getTicketFieldCount(apiCredentials: ZendeskApiCredentials): Long {
         return getResourceCount("${CUSTOM_FIELD_ENDPOINT}/count", apiCredentials)
     }
 
@@ -112,7 +115,7 @@ class ZendeskApi(
             .userFields
     }
 
-    fun getUserFieldCount(apiCredentials: ZendeskApiCredentials): Int {
+    fun getUserFieldCount(apiCredentials: ZendeskApiCredentials): Long {
         return getResourceCount("${USER_FIELD_ENDPOINT}/count", apiCredentials)
     }
 
@@ -130,13 +133,18 @@ class ZendeskApi(
             .ticketForms
     }
 
+    fun getTicketFormsCount(apiCredentials: ZendeskApiCredentials): Long {
+        val response = get(TICKET_FORM_ENDPOINT, apiCredentials)
+        return JsonParser().parseAsJsonObject(response.bodyText()).getValue("count")
+    }
+
     // USERS
     fun getUsers(
         apiCredentials: ZendeskApiCredentials,
         zendeskPageParams: ZendeskPageParams,
         saveUsers: (List<ZendeskUser>, String) -> List<ZendeskUser>?
     ): CompletableFuture<List<ZendeskUser>> {
-        println("getUser() invoked for page: ${zendeskPageParams.page}... ${LocalDateTime.now()}")
+        logger.info("getUser() invoked for page: ${zendeskPageParams.page}... ")
         return HttpRequest
             .get("https://${apiCredentials.subdomain}.${HOST}${USERS_ENDPOINT}")
             .query("page", zendeskPageParams.page).query("per_page", zendeskPageParams.perPage)
@@ -146,11 +154,11 @@ class ZendeskApi(
             .thenApply { response ->
                 val header = response.header("Retry-After")
                 if (StringUtils.hasText(header)) {
-                    println("Retry after header is $header")
+                    logger.info("Retry after header is $header")
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
-                            println("waited for ${header.toLong()} seconds for users... reseting limit")
+                            logger.info("waited for ${header.toLong()} seconds for users... reseting limit")
                             apiLimitWatcher.resetLimitFor(apiCredentials.operationId)
                             getUsers(apiCredentials, zendeskPageParams, saveUsers)
                                 .thenApply { users -> saveUsers.invoke(users, apiCredentials.operationId) }
@@ -179,11 +187,11 @@ class ZendeskApi(
             .thenApply { response ->
                 val header = response.header("Retry-After")
                 if (StringUtils.hasText(header)) {
-                    println("Retry after header is $header")
+                    logger.info("Retry after header is $header")
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
-                            println("waited for ${header.toLong()} seconds for users... reseting limit")
+                            logger.info("waited for ${header.toLong()} seconds for users... reseting limit")
                             apiLimitWatcher.resetLimitFor(apiCredentials.operationId)
                             getUsers(apiCredentials, zendeskPageParams, saveUsers)
                                 .thenApply { users -> saveUsers.invoke(users, apiCredentials.operationId) }
@@ -196,18 +204,17 @@ class ZendeskApi(
                     .parse(response.bodyText(), ZendeskDeletedUsers::class.java)
                     .users
 
-                println("fetched user count: ${users.count()}")
+                logger.info("fetched user count: ${users.count()}")
 
                 return@thenApply users
             }
     }
 
-    fun getUserCount(apiCredentials: ZendeskApiCredentials): Int {
+    fun getUserCount(apiCredentials: ZendeskApiCredentials): Long {
         return getResourceCount("${USERS_ENDPOINT}/count", apiCredentials)
     }
 
-    fun getDeletedUserCount(apiCredentials: ZendeskApiCredentials): Int {
-//        return getResourceCount("${DELETED_USERS_ENDPOINT}/count", apiCredentials)
+    fun getDeletedUserCount(apiCredentials: ZendeskApiCredentials): Long {
         val response = get(DELETED_USERS_ENDPOINT, apiCredentials)
         return JsonParser().parseAsJsonObject(response.bodyText()).getValue("count")
     }
@@ -218,7 +225,7 @@ class ZendeskApi(
         zendeskPageParams: ZendeskPageParams,
         saveTickets: (List<ZendeskTicket>, String) -> List<ZendeskTicket>
     ): CompletableFuture<List<ZendeskTicket>> {
-        println("getTickets() invoked for page: ${zendeskPageParams.page}... ${LocalDateTime.now()}")
+        logger.info("getTickets() invoked for page: ${zendeskPageParams.page}...}")
         return HttpRequest
             .get("https://${apiCredentials.subdomain}.${HOST}${TICKETS_ENDPOINT}")
             .query("include", "comment_count")
@@ -229,11 +236,11 @@ class ZendeskApi(
             .thenApply { response ->
                 val header = response.header("Retry-After")
                 if (StringUtils.hasText(header)) {
-                    println("Retry after header is $header. waiting $header seconds...")
+                    logger.info("Retry after header is $header. waiting $header seconds...")
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
-                            println("waited for ${header.toLong()} seconds for tickets... reseting limit")
+                            logger.info("waited for ${header.toLong()} seconds for tickets... reseting limit")
                             apiLimitWatcher.resetLimitFor(apiCredentials.operationId)
                             getTickets(apiCredentials, zendeskPageParams, saveTickets)
                                 .thenApply { tickets -> saveTickets(tickets, apiCredentials.operationId) }
@@ -249,7 +256,7 @@ class ZendeskApi(
             }
     }
 
-    fun getTicketCount(apiCredentials: ZendeskApiCredentials): Int {
+    fun getTicketCount(apiCredentials: ZendeskApiCredentials): Long {
         return getResourceCount("${TICKETS_ENDPOINT}/count", apiCredentials)
     }
 
@@ -272,11 +279,11 @@ class ZendeskApi(
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
-                            println("waited for ${header.toLong()} seconds for ticket comments... reseting limit")
+                            logger.info("waited for ${header.toLong()} seconds for ticket comments... reseting limit")
                             apiLimitWatcher.resetLimitFor(apiCredentials.operationId)
                             getTicketComments(ticketId, apiCredentials, kFunction3)
                                 .thenApply { comments -> kFunction3.invoke(comments, apiCredentials.operationId, ticketId) }
-                                .thenApply { comments -> println("${comments.count()} comments saved by SCHEDULED") }
+                                .thenApply { comments -> logger.info("${comments.count()} comments saved by SCHEDULED") }
                         }, header.toLong(), TimeUnit.SECONDS)
 
                     return@thenApply emptyList()
@@ -299,7 +306,7 @@ class ZendeskApi(
             .send()
     }
 
-    private fun getResourceCount(endpoint: String, apiCredentials: ZendeskApiCredentials): Int {
+    private fun getResourceCount(endpoint: String, apiCredentials: ZendeskApiCredentials): Long {
         val response = get(endpoint, apiCredentials)
         return JsonParser().parseAsJsonObject(response.bodyText())
             .getJsonObject("count")

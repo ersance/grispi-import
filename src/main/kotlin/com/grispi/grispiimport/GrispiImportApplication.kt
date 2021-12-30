@@ -1,5 +1,6 @@
 package com.grispi.grispiimport
 
+import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -8,10 +9,11 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory
 
 // TODO: 15.12.2021 RESOURCE_NAMES
-// TODO: 15.12.2021 INFO AND WARNING LOGS
 @SpringBootApplication
 @EnableMongoRepositories
 class GrispiImportApplication: CommandLineRunner {
+
+	private val logger = LoggerFactory.getLogger(javaClass)
 
 	@Bean
 	fun jedisConnectionFactory(): JedisConnectionFactory? {
@@ -19,6 +21,10 @@ class GrispiImportApplication: CommandLineRunner {
 	}
 
 	override fun run(vararg args: String?) {
+		logger.debug("debug log is like that")
+		logger.info("info log is like that")
+		logger.warn("warn log is like that")
+		logger.error("error log is like that")
 	}
 
 }

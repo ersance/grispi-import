@@ -31,6 +31,9 @@ class ZendeskUser: ZendeskEntity() {
     @JSON(name = "tags")
     var tags: MutableSet<String> = mutableSetOf()
 
+    @JSON(name = "external_id")
+    var externalId: String? = null
+
     @JSON(name = "user_fields")
     var userFields: Map<String, String> = mapOf()
 
@@ -38,6 +41,9 @@ class ZendeskUser: ZendeskEntity() {
         val userFieldSet = mutableSetOf<TicketRequest.FieldFromUi_>()
         if (PhoneNumberValidator.isValid(phone.toString())) {
             userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_PHONE_USER_FIELD_KEY, phone))
+        }
+        if (externalId != null) {
+            userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_EXTERNAL_ID_USER_FIELD_KEY, externalId))
         }
 
         userFields.map { TicketRequest.FieldFromUi_("uiz.${it.key}", it.value) }.toCollection(userFieldSet)

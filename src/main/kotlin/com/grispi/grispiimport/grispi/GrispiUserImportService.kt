@@ -2,6 +2,7 @@ package com.grispi.grispiimport.grispi
 
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.user.ZendeskUserRepository
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -20,6 +21,8 @@ class GrispiUserImportService(
     @Autowired val zendeskUserRepository: ZendeskUserRepository
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     companion object {
         const val RESOURCE_NAME = "user"
         const val DELETED_USER_NAME = "deleted_user"
@@ -34,13 +37,12 @@ class GrispiUserImportService(
     fun importUsers(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         val userCount = zendeskUserRepository.countAllByOperationIdAndActiveTrue(operationId)
 
-        println("user import process is started for ${userCount} users at: ${LocalDateTime.now()}")
+        logger.info("user import process is started for ${userCount} users at: ${LocalDateTime.now()}")
 
         val combinedUsers: MutableList<CompletableFuture<ImportLog>> = mutableListOf()
         val to = BigDecimal(userCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt()
         for (index in 0 until to) {
             var users = zendeskUserRepository.findAllByOperationIdAndActiveTrue(operationId, PageRequest.of(index, PAGE_SIZE))
-            println("fetching $index. page")
 
             for (user in users.content) {
                 val userRequest = grispiApi
@@ -88,13 +90,13 @@ class GrispiUserImportService(
     fun importDeletedUsers(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         val deletedUserCount = zendeskUserRepository.countAllByOperationIdAndActiveFalse(operationId)
 
-        println("deleted user import process is started for ${deletedUserCount} users at: ${LocalDateTime.now()}")
+        logger.info("deleted user import process is started for ${deletedUserCount} users at: ${LocalDateTime.now()}")
 
         val combinedDeletedUsers: MutableList<CompletableFuture<ImportLog>> = mutableListOf()
         val to = BigDecimal(deletedUserCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt()
         for (index in 0 until to) {
             var users = zendeskUserRepository.findAllByOperationIdAndActiveFalse(operationId, PageRequest.of(index, PAGE_SIZE))
-            println("fetching $index. page")
+            logger.info("fetching $index. page")
 
             for (user in users.content) {
                 val deletedUserRequest = grispiApi
@@ -137,6 +139,7 @@ class GrispiUserImportService(
         }
 
         CompletableFuture.allOf(*combinedDeletedUsers.toTypedArray()).get(1, TimeUnit.DAYS)
+        logger.info("deleted user import process has ended for ${deletedUserCount} users at: ${LocalDateTime.now()}")
     }
 
 }

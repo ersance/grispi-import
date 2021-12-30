@@ -4,6 +4,7 @@ import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
 import org.aspectj.lang.annotation.Pointcut
+import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 
@@ -12,12 +13,14 @@ import org.springframework.stereotype.Component
 @Aspect
 class TimeSpentAspect {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     @Around("@annotation(com.grispi.grispiimport.utils.CalculateTimeSpent)")
     fun calculateSpentTime(joinPoint: ProceedingJoinPoint) {
         val started = System.currentTimeMillis()
         joinPoint.proceed()
         val timeSpent = System.currentTimeMillis() - started
-        println("$joinPoint method execution took: ${humanize(timeSpent)}")
+        logger.info("$joinPoint method execution took: ${humanize(timeSpent)}")
     }
 
     private fun humanize(timeSpent: Long): String {

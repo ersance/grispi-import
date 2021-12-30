@@ -1,7 +1,10 @@
 package com.grispi.grispiimport.zendesk
 
+import com.grispi.grispiimport.common.NotFoundException
 import com.grispi.grispiimport.grispi.GrispiImportService
+import org.slf4j.MDC
 import org.springframework.data.annotation.Id
+import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.repository.MongoRepository
 import org.springframework.stereotype.Service
 import java.util.*
@@ -50,7 +53,7 @@ class ZendeskImportService(
         }
     }
 
-    private fun createTenantImportOperation(zendeskImportRequest: ZendeskImportRequest, resourceCounts: Map<String, Int>): ZendeskTenantImport {
+    private fun createTenantImportOperation(zendeskImportRequest: ZendeskImportRequest, resourceCounts: Map<String, Long>): ZendeskTenantImport {
         val tenantImport = ZendeskTenantImport(
             zendeskImportRequest.grispiApiCredentials.tenantId,
             zendeskImportRequest.zendeskApiCredentials.subdomain,
@@ -58,17 +61,26 @@ class ZendeskImportService(
         return zendeskImportRepository.save(tenantImport)
     }
 
+    fun checkStatus(operationId: String, zendeskApiCredentials: ZendeskApiCredentials): ZendeskImportStatusResponse {
+        val import = zendeskImportRepository.findById(operationId)
+            .orElseThrow { NotFoundException("zendesk tenant import not found by id: ${operationId} ") }
+
+        val fetchedResourcesCounts = zendeskFetchService.fetchedResourcesCounts(operationId, zendeskApiCredentials)
+
+        return ZendeskImportStatusResponse(import.grispiTenantId, import.zendeskTenantId, import.createdAt, fetchedResourcesCounts)
+    }
+
 }
 
 interface ZendeskImportRepository: MongoRepository<ZendeskTenantImport, String> {
 }
 
-class ZendeskTenantImport(val grispiTenantId: String, val zendeskTenantId: String, val resources: Map<String, Int>?) {
+@Document
+class ZendeskTenantImport(val grispiTenantId: String, val zendeskTenantId: String, val resources: Map<String, Long>?) {
 
-    // TODO: 16.12.2021 operation id
     @Id
-    val id: String = UUID.randomUUID().toString()
+    var id: String = UUID.randomUUID().toString()
 
-    val createdAt: Long = System.currentTimeMillis()
+    var createdAt: Long = System.currentTimeMillis()
 
 }

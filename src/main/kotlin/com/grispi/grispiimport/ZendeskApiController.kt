@@ -1,5 +1,6 @@
 package com.grispi.grispiimport
 
+import ch.qos.logback.classic.ClassicConstants.FINALIZE_SESSION_MARKER
 import com.grispi.grispiimport.grispi.*
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.group.ZendeskGroupRepository
@@ -15,6 +16,8 @@ import com.grispi.grispiimport.zendesk.user.ZendeskUserRepository
 import com.grispi.grispiimport.zendesk.userfield.ZendeskUserFieldRepository
 import jodd.http.HttpRequest
 import jodd.json.JsonParser
+import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Profile
 import org.springframework.data.domain.Page
@@ -32,6 +35,9 @@ import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
+/**
+ * this controller is only for debugging things on development!
+ */
 @Profile("dev")
 @RestController
 class ZendeskApiController(
@@ -45,9 +51,10 @@ class ZendeskApiController(
   @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
   @Autowired val zendeskTicketCommentRepository: ZendeskTicketCommentRepository,
   @Autowired val zendeskTicketFormRepository: ZendeskTicketFormRepository,
-  @Autowired val zendeskMappingQueryRepository: ZendeskMappingQueryRepository,
-  @Autowired val testApiLimit: TestApiLimit
+  @Autowired val zendeskMappingQueryRepository: ZendeskMappingQueryRepository
 ) {
+
+  private val logger = LoggerFactory.getLogger(javaClass)
 
   companion object {
     val apiCredentials =
@@ -69,21 +76,28 @@ class ZendeskApiController(
     return zendeskTicketCommentRepository.findAll(PageRequest.of(0, 100).withSort(Sort.by("createdAt").descending()))
   }
 
-  @GetMapping("/mock")
-  fun testMockServer() {
-    testApiLimit.test()
+  @GetMapping("/logla")
+  fun loglaKocum() {
+    val tenant = "tenant"
+
+    logger.info("daha bi sey yok. bunlarin app.log'ta olmasi lazim")
+
+    MDC.put("tenantId", tenant)
+    logger.info("import biiznillah...")
+    Thread.sleep(2000)
+    logger.info("devamke..")
+    Thread.sleep(1000)
+    logger.info("yeter.")
+    logger.info(FINALIZE_SESSION_MARKER, "semiallaaaahulimelhamide. tenant");
   }
 
   @GetMapping("/deleted-users")
   fun deletedUsers() {
     val deletedUserCount = zendeskUserRepository.countAllByOperationIdAndActiveFalse("66a40cc1-3602-4f58-b115-943f1f5754d7")
 
-    println("deleted user import process is started for ${deletedUserCount} users at: ${LocalDateTime.now()}")
-
     val to = BigDecimal(deletedUserCount).divide(BigDecimal(GrispiUserImportService.PAGE_SIZE), RoundingMode.UP).toInt()
     for (index in 0 until to) {
       var users = zendeskUserRepository.findAllByOperationIdAndActiveFalse("66a40cc1-3602-4f58-b115-943f1f5754d7", PageRequest.of(index, GrispiUserImportService.PAGE_SIZE))
-      println("${users.content.size} users for page index: $index")
     }
   }
 
@@ -96,8 +110,6 @@ class ZendeskApiController(
   fun ticketStatus(): MutableList<TicketUpdateObj> {
     val operationId = "66a40cc1-3602-4f58-b115-943f1f5754d7"
     val ticketCount = zendeskTicketRepository.countAllByOperationIdAndBrandId(operationId, GrispiTicketImportService.YUVANIKUR_BRAND_ID)
-
-    println("user import process is started for ${ticketCount} users at: ${LocalDateTime.now()}")
 
     val ticketUpdateObjects: MutableList<TicketUpdateObj> = mutableListOf()
     val to = BigDecimal(ticketCount).divide(BigDecimal(GrispiUserImportService.PAGE_SIZE), RoundingMode.UP).toInt()
@@ -113,16 +125,5 @@ class ZendeskApiController(
   }
 
   data class TicketUpdateObj(val ticketKey: String, val status: String)
-
-//  @GetMapping("/ticket-comments")
-//  fun ticketComments(): List<Pair<Long?, List<CommentRequest>>> {
-//    val ticketCount = zendeskTicketRepository.countAllByOperationIdAndBrandId(operationId, YUVANIKUR_BRAND_ID)
-//
-//    println("user import process is started for ${ticketCount} users at: ${LocalDateTime.now()}")
-//
-//    val to = BigDecimal(ticketCount).divide(BigDecimal(GrispiUserImportService.PAGE_SIZE), RoundingMode.UP).toInt()
-//    for (index in 0 until to) {
-//      val tickets = zendeskTicketRepository.findAllByOperationIdAndBrandId(operationId, YUVANIKUR_BRAND_ID, PageRequest.of(index, PAGE_SIZE))
-//  }
 
 }

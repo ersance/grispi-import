@@ -3,6 +3,7 @@ package com.grispi.grispiimport.grispi
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.group.ZendeskGroupRepository
 import jodd.json.JsonParser
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
@@ -16,6 +17,8 @@ class GrispiGroupImportService(
     @Autowired val zendeskGroupRepository: ZendeskGroupRepository,
 ) {
 
+    private val logger = LoggerFactory.getLogger(javaClass)
+
     companion object {
         const val RESOURCE_NAME = "group"
         const val PAGE_SIZE = 1000
@@ -24,10 +27,9 @@ class GrispiGroupImportService(
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         var groups = zendeskGroupRepository.findAllByOperationId(operationId, Pageable.ofSize(PAGE_SIZE))
 
-        println("group import process is started for ${groups.totalElements} groups at: ${LocalDateTime.now()}")
+        logger.info("group import process is started for ${groups.totalElements} groups at: ${LocalDateTime.now()}")
 
         do {
-            println("fetching ${groups.pageable.pageNumber}. page")
             for (group in groups.content) {
                 try {
                     val createGroupResponse = grispiApi.createGroup(group.toGrispiGroupRequest(), grispiApiCredentials)
@@ -56,6 +58,8 @@ class GrispiGroupImportService(
                 groups = zendeskGroupRepository.findAllByOperationId(operationId, groups.nextPageable())
             }
         } while (groups.hasNext())
+
+        logger.info("group import process has ended for ${groups.totalElements} groups at: ${LocalDateTime.now()}")
     }
 
 }

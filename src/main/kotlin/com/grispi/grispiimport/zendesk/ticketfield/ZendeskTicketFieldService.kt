@@ -7,9 +7,17 @@ import com.grispi.grispiimport.zendesk.ZendeskApi
 import com.grispi.grispiimport.zendesk.ZendeskApiCredentials
 import com.grispi.grispiimport.zendesk.ZendeskMapping
 import com.grispi.grispiimport.zendesk.ZendeskMappingRepository
+import com.grispi.grispiimport.zendesk.organization.ResourceCount
+import com.grispi.grispiimport.zendesk.organization.ZendeskOrganizationService
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.mongodb.repository.MongoRepository
+import org.springframework.data.repository.query.Param
+import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
+import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
 
 @Service
@@ -47,4 +55,24 @@ class ZendeskTicketFieldService(
         zendeskTicketFieldRepository.saveAll(filteredTicketFields)
     }
 
+    fun fetchedTicketFieldsCount(operationId: String): Long {
+        return zendeskTicketFieldRepository.countAllByOperationId(operationId)
+    }
+
+    fun counts(operationId: String, zendeskApiCredentials: ZendeskApiCredentials): ResourceCount {
+        return CompletableFuture
+            .supplyAsync { zendeskApi.getTicketFieldCount(zendeskApiCredentials) }
+            .thenCombine(
+                CompletableFuture.supplyAsync { fetchedTicketFieldsCount(operationId) },
+                { zCount, fCount -> ResourceCount(RESOURCE_NAME, zCount, fCount) })
+            .get()
+    }
+
 }
+
+@Repository
+interface ZendeskTicketFieldRepository: MongoRepository<ZendeskTicketField, String> {
+    fun findAllByOperationId(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskTicketField>
+    fun countAllByOperationId(@Param("operationId") operationId: String): Long
+}
+
