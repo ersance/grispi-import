@@ -1,5 +1,6 @@
 package com.grispi.grispiimport.grispi
 
+import com.grispi.grispiimport.utils.CalculateTimeSpent
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
 import org.slf4j.LoggerFactory
@@ -11,6 +12,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 
 @Service
 class GrispiTicketImportService(
@@ -27,9 +29,10 @@ class GrispiTicketImportService(
         const val RESOURCE_NAME = "ticket"
         const val PAGE_SIZE = 1000
         const val YUVANIKUR_BRAND_ID = 360002498720
+        const val DUGUNBUKETI_BRAND_ID = 360000629299
     }
 
-    fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
+    fun importBrand(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         val ticketCount = zendeskTicketRepository.countAllByOperationIdAndBrandId(operationId, YUVANIKUR_BRAND_ID)
 
         logger.info("ticket import process is started for ${ticketCount} tickets at: ${LocalDateTime.now()}")
@@ -78,4 +81,62 @@ class GrispiTicketImportService(
 
         logger.info("ticket import process has ended for ${ticketCount} tickets at: ${LocalDateTime.now()}")
     }
+
+    @CalculateTimeSpent
+    fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
+        val ticketCount = zendeskTicketRepository.countAllByOperationId(operationId)
+
+        logger.info("ticket import process is started for ${ticketCount} tickets at: ${LocalDateTime.now()}")
+
+        val ticketRequests: MutableList<CompletableFuture<ImportLog>> = mutableListOf()
+
+        val to = BigDecimal(ticketCount).divide(BigDecimal(GrispiUserImportService.PAGE_SIZE), RoundingMode.UP).toInt()
+        for (index in 0 until to) {
+            val tickets = zendeskTicketRepository.findAllByOperationId(operationId, PageRequest.of(index, PAGE_SIZE))
+
+            logger.info("fetching {${tickets.pageable.pageNumber}}. page for {${tickets.content.count()}} tickets")
+
+            for (ticket in tickets.content) {
+                val ticketRequest = grispiApi.createTicketAsync(ticket.toTicketRequest(
+                    zendeskMappingQueryRepository::findGrispiUserId,
+                    zendeskMappingQueryRepository::findGrispiGroupId,
+                    zendeskMappingQueryRepository::findGrispiTicketFormId),
+                    grispiApiCredentials
+                )
+                .thenApply { ticketKey ->
+                    zendeskMappingRepository.save(ZendeskMapping(null, ticket.id, ticketKey, RESOURCE_NAME, operationId))
+                    zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS, RESOURCE_NAME, "{${ticket.subject}} created successfully", operationId))
+                }
+                .exceptionally { exception ->
+                    when (exception.cause) {
+                        is GrispiApiException -> {
+                            val grispiApiException = exception.cause as GrispiApiException
+                            zendeskLogRepository.save(
+                                ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                                    "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. status code: ${grispiApiException.statusCode} message: ${grispiApiException.exceptionMessage}",
+                                    operationId))
+                        }
+                        is GrispiReferenceNotFoundException -> {
+                            val grispiReferenceNotFoundException = exception.cause as GrispiReferenceNotFoundException
+                            zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                               "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. ${grispiReferenceNotFoundException.printMessage()}",
+                               operationId))
+                        }
+                        else -> {
+                            zendeskLogRepository.save(ImportLog(null, LogType.ERROR,
+                                GrispiUserImportService.RESOURCE_NAME,
+                                "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. ${exception.message}",
+                                operationId))
+                        }
+                    }
+                }
+
+                ticketRequests.add(ticketRequest)
+            }
+        }
+        CompletableFuture.allOf(*ticketRequests.toTypedArray()).get(1, TimeUnit.DAYS)
+
+        logger.info("ticket import process has ended for ${ticketCount} tickets at: ${LocalDateTime.now()}")
+    }
+
 }

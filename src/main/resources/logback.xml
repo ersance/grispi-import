@@ -38,25 +38,17 @@
         </sift>
     </appender>
 
-<!--    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">-->
-<!--        <withJansi>true</withJansi>-->
-<!--        &lt;!&ndash; encoders are assigned the type-->
-<!--             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default &ndash;&gt;-->
-<!--        <encoder>-->
-<!--            <pattern>%cyan(%d{HH:mm:ss.SSS}) %highlight(%-5level) %gray([%thread]) %magenta(%logger{36}) - %msg%n</pattern>-->
-<!--        </encoder>-->
-<!--    </appender>-->
-
-    <!--<logger name="io.micronaut.data.query" level="trace" />-->
-    <!--<logger name="org.hibernate.type.descriptor.sql" level="trace" />-->
-    <!--<logger name="org.hibernate.type.BasicTypeRegistry" level="trace" />-->
-    <!--<logger name="io.micronaut.core.reflect" level="trace" />-->
-    <!--<logger name="io.micronaut.security" level="trace" />-->
-    <!--<logger name="com.grispi" level="trace" />-->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>%cyan(%d{HH:mm:ss.SSS}) %highlight(%-5level) %gray([%thread]) %magenta(%logger{36}) - %msg%n</pattern>
+        </encoder>
+    </appender>
 
     <root level="INFO">
-<!--        <appender-ref ref="STDOUT" />-->
-        <!--        <appender-ref ref="FILE-ROLLING" />-->
-                <appender-ref ref="SIFT" />
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="SIFT" />
     </root>
 </configuration>

@@ -5,6 +5,7 @@ import com.grispi.grispiimport.zendesk.ticket.ZendeskCustomField
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketChannel
 import com.vdurmont.emoji.EmojiParser
 import jodd.json.meta.JSON
+import org.apache.commons.lang3.StringUtils
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 import java.lang.IllegalArgumentException
@@ -107,10 +108,16 @@ class ZendeskTicket: ZendeskEntity() {
         val grispiCreatorId = getGrispiUserId(submitterId)
         val grispiRequesterId = getGrispiUserId(requesterId)
 
+        val subjectSafe = if (StringUtils.isBlank(subject.toString())) {
+            description.subSequence(0, 50).toString()
+        } else {
+            subject.toString()
+        }
+
         return TicketRequest.Builder()
             .channel(channel.toGrispiChannel())
             .formId(getGrispiTicketFormId.invoke(ticketFormId).toLong())
-            .subject(subject.toString())
+            .subject(subjectSafe)
             .creator(grispiCreatorId,"null", "null")
             .requester(grispiRequesterId,"null", "null")
             .assignee(grispiGroupId, grispiAssigneeId.toString())

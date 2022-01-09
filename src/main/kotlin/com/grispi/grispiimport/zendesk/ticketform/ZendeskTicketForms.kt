@@ -3,12 +3,14 @@ package com.grispi.grispiimport.zendesk.ticketform
 import com.grispi.grispiimport.grispi.GrispiTicketFormPermission
 import com.grispi.grispiimport.grispi.GrispiTicketFormRequest
 import com.grispi.grispiimport.zendesk.ZendeskEntity
+import com.grispi.grispiimport.zendesk.ticketfield.ZendeskTicketFieldService.Companion.DISCARDED_FIELD_KEY
 import jodd.json.meta.JSON
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 import java.time.Instant
-import java.util.stream.Collectors
-import kotlin.reflect.KFunction1
+import java.util.*
+import kotlin.reflect.jvm.internal.impl.load.kotlin.JvmType
+import kotlin.streams.toList
 
 class ZendeskTicketForms {
 
@@ -66,13 +68,25 @@ class ZendeskTicketForm: ZendeskEntity() {
     @JSON(name = "ticket_field_ids")
     var ticketFieldIds: List<Long> = mutableListOf()
 
-    fun toGrispiTicketFormRequest(getGrispiTicketFieldKey: (Long) -> String?): GrispiTicketFormRequest {
+    fun toGrispiTicketFormRequest(findGrispiTicketFieldKey: (Long) -> String?): GrispiTicketFormRequest {
         val ticketFormPermission = mapPermission()
-        val grispiTicketFieldIds = ticketFieldIds.stream().map {
-            getGrispiTicketFieldKey.invoke(it) ?: "tiz.${it}"
-        }.toList()
+        val grispiTicketFieldIds = ticketFieldIds.stream()
+            .map {
+                val grispiKey = findGrispiTicketFieldKey.invoke(it)
+                if (grispiKey == null) {
+                    "tiz.${it}"
+                }
+                else if (grispiKey == DISCARDED_FIELD_KEY) {
+                    null
+                }
+                else {
+                    grispiKey
+                }
+            }
+            .filter { it != null }
+            .toList()
 
-        return GrispiTicketFormRequest(name, displayName, ticketFormPermission, grispiTicketFieldIds)
+        return GrispiTicketFormRequest(name, displayName, ticketFormPermission, grispiTicketFieldIds as List<String>)
     }
 
     private fun mapPermission(): GrispiTicketFormPermission {

@@ -21,10 +21,10 @@ class GrispiImportApplication: CommandLineRunner {
 	}
 
 	override fun run(vararg args: String?) {
-		logger.debug("debug log is like that")
-		logger.info("info log is like that")
-		logger.warn("warn log is like that")
-		logger.error("error log is like that")
+//		logger.debug("debug log is like that")
+//		logger.info("info log is like that")
+//		logger.warn("warn log is like that")
+//		logger.error("error log is like that")
 	}
 
 }

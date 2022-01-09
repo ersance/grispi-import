@@ -129,6 +129,18 @@ class GrispiApi {
             }
     }
 
+    fun createTicketAsync(ticketRequest: TicketRequest, apiCredentials: GrispiApiCredentials): CompletableFuture<String> {
+        return postAsync(TICKET_ENDPOINT, ticketRequest.toJson(), apiCredentials)
+            .thenApply { response ->
+                if (response.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+                    return@thenApply response.bodyText()
+                }
+                else {
+                    throw GrispiApiException(response.statusCode(), response.bodyText())
+                }
+            }
+    }
+
     fun createTicket(ticketRequest: TicketRequest, apiCredentials: GrispiApiCredentials): String {
         val httpResponse = post(TICKET_ENDPOINT, ticketRequest.toJson(), apiCredentials)
 
@@ -137,6 +149,19 @@ class GrispiApi {
         }
 
         return httpResponse.bodyText()
+    }
+
+    fun createCommentsAsync(commentRequests: List<CommentRequest>?, apiCredentials: GrispiApiCredentials): CompletableFuture<String> {
+        val commentRequestJson = JsonSerializer().deep(true).serialize(commentRequests)
+        return postAsync("${TICKET_ENDPOINT}/${commentRequests?.first()?.ticketKey}${TICKET_COMMENT_ENDPOINT}", commentRequestJson, apiCredentials)
+            .thenApply { response ->
+                if (response.statusCode().equals(HttpStatus.HTTP_CREATED)) {
+                    return@thenApply response.bodyText()
+                }
+                else {
+                    throw GrispiApiException(response.statusCode(), response.bodyText())
+                }
+            }
     }
 
     fun createComments(commentRequests: List<CommentRequest>?, apiCredentials: GrispiApiCredentials): String {

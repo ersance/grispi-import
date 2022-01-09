@@ -7,12 +7,15 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
 @RestController
 class ZendeskImportController(
     @Autowired val zendeskImportService: ZendeskImportService,
+    @Autowired val zendeskImportRepository: ZendeskImportRepository,
     @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
 ) {
 
@@ -24,6 +27,14 @@ class ZendeskImportController(
         val zendeskTenantImport = zendeskImportService.import(zendeskImportRequest)
 
         return ZendeskImportResponse(zendeskTenantImport)
+    }
+
+    @PostMapping("/zendesk-import", consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun blog(@RequestBody zendeskImportRequest: ZendeskImportRequest): ZendeskTenantImport {
+
+        MDC.put("tenantId", zendeskImportRequest.grispiApiCredentials.tenantId)
+
+        return zendeskImportService.import(zendeskImportRequest)
     }
 
     @GetMapping("/import/{operationId}/status")

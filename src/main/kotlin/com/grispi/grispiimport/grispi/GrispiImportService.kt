@@ -33,7 +33,6 @@ class GrispiImportService(
         ticketFieldService.import(operationId, grispiApiCredentials)
         ticketFormService.import(operationId, grispiApiCredentials)
         userFieldService.import(operationId, grispiApiCredentials)
-        userService.import(operationId, grispiApiCredentials)
         grispiTicketImportService.import(operationId, grispiApiCredentials)
         grispiTicketCommentImportService.import(operationId, grispiApiCredentials)
 

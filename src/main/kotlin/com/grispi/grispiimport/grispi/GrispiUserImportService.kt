@@ -44,6 +44,8 @@ class GrispiUserImportService(
         for (index in 0 until to) {
             var users = zendeskUserRepository.findAllByOperationIdAndActiveTrue(operationId, PageRequest.of(index, PAGE_SIZE))
 
+            logger.info("fetching {${users.pageable.pageNumber}}. page for {${users.content.count()}} users")
+
             for (user in users.content) {
                 val userRequest = grispiApi
                     .createUser(user.toGrispiUserRequest(), grispiApiCredentials)

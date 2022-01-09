@@ -35,9 +35,11 @@ class ZendeskTicketCommentService(
 
         logger.info("ticket comment fetch process is started for ${commentedTicketsCount} tickets at: ${LocalDateTime.now()}")
 
+        val combinedCommentRequests: MutableList<CompletableFuture<CommentMap>> = mutableListOf()
+
         val to = BigDecimal(commentedTicketsCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt()
         for (index in (startingFrom)!!.rangeTo(to)) {
-            val commentedTickets = ticketRepository.findCommentedTickets(PageRequest.of(index, PAGE_SIZE))
+            val commentedTickets = ticketRepository.findCommentedTickets(operationId, PageRequest.of(index, PAGE_SIZE))
 
             for (ticket in commentedTickets) {
                 if (apiLimitWatcher.isApiUnavailable(operationId)) {
@@ -53,7 +55,7 @@ class ZendeskTicketCommentService(
                 }
 
                 commentMapRepository.save(CommentMap(ticket.id, callingZendesk = true))
-                zendeskApi
+                val getTicketComments = zendeskApi
                     .getTicketComments(ticket.id, zendeskApiCredentials, this::save)
                     .thenApply { comments -> save(comments, operationId, ticket.id) }
                     .handle { t, exception ->
@@ -61,10 +63,16 @@ class ZendeskTicketCommentService(
                         commentMapRepository.save(CommentMap(ticket.id, exception = exception.stackTraceToString()))
                     }
 
+                combinedCommentRequests.add(getTicketComments)
             }
 
             logger.info("ticket comments fetched for page: ${index}")
         }
+
+
+        CompletableFuture.allOf(*combinedCommentRequests.toTypedArray()).get(1, TimeUnit.DAYS)
+
+        logger.info("ticket comments import process is done")
     }
 
     fun save(comments: List<ZendeskComment>, operationId: String, ticketId: Long): List<ZendeskComment> {
@@ -103,8 +111,12 @@ class ZendeskTicketCommentService(
 @Repository
 interface ZendeskTicketCommentRepository: MongoRepository<ZendeskComment, Long> {
 
-    fun findAllByOperationId(@Param("operationId") operationId: String): List<ZendeskComment>
+//    @Aggregation("{'\$match': {'operationId': ?0}, {'\$group': {'_id': '\$ticketId', 'comments': { '\$push: '\$\$ROOT' } }}")
+//    fun findAllByOperationId(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskComment>
+
     fun findAllByOperationIdAndTicketIdIsIn(@Param("operationId") operationId: String, @Param("ticketIds") ticketIds: List<Long>): List<ZendeskComment>
+
     fun countAllByOperationId(operationId: String): Long
 
 }
+

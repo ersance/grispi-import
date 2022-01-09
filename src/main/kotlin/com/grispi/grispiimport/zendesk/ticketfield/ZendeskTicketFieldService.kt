@@ -29,6 +29,7 @@ class ZendeskTicketFieldService(
 
     companion object {
         const val RESOURCE_NAME = "ticket_field"
+        const val DISCARDED_FIELD_KEY = "discarded_field"
 
         /**
          * group is unnecessary for Grispi
@@ -51,6 +52,11 @@ class ZendeskTicketFieldService(
                 zendeskMappingRepository.save(ZendeskMapping(null, ticketField.id, "ts.${ticketField.type}", RESOURCE_NAME, operationId))
             }
 
+        zendeskTicketFields.stream()
+            .filter { ticketField -> FIELDS_TO_EXCLUDE.contains(ticketField.type) }
+            .forEach { ticketField ->
+                zendeskMappingRepository.save(ZendeskMapping(null, ticketField.id, DISCARDED_FIELD_KEY, RESOURCE_NAME, operationId))
+            }
 
         zendeskTicketFieldRepository.saveAll(filteredTicketFields)
     }

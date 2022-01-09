@@ -72,8 +72,7 @@ class ZendeskImportService(
 
 }
 
-interface ZendeskImportRepository: MongoRepository<ZendeskTenantImport, String> {
-}
+interface ZendeskImportRepository: MongoRepository<ZendeskTenantImport, String>
 
 @Document
 class ZendeskTenantImport(val grispiTenantId: String, val zendeskTenantId: String, val resources: Map<String, Long>?) {

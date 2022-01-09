@@ -36,6 +36,7 @@ class ZendeskTicketService(
         logger.info("ticket import process is started for ${ticketCount} tickets at: ${LocalDateTime.now()}")
 
         val combinedTickets: MutableList<CompletableFuture<List<ZendeskTicket>>> = mutableListOf()
+
         val to = BigDecimal(ticketCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt()
         for (index in (startingFrom)!!.rangeTo(to)) {
             logger.info("fetching ${index}. page for tickets")
@@ -61,8 +62,6 @@ class ZendeskTicketService(
                 .thenApply { tickets -> save(tickets, operationId) }
 
             combinedTickets.add(page)
-
-            page.thenRun { logger.info("tickets imported for page: ${index}") }
         }
 
         CompletableFuture.allOf(*combinedTickets.toTypedArray()).get(1, TimeUnit.DAYS)

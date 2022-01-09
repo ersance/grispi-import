@@ -51,7 +51,8 @@ class ZendeskApiController(
   @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
   @Autowired val zendeskTicketCommentRepository: ZendeskTicketCommentRepository,
   @Autowired val zendeskTicketFormRepository: ZendeskTicketFormRepository,
-  @Autowired val zendeskMappingQueryRepository: ZendeskMappingQueryRepository
+  @Autowired val zendeskMappingQueryRepository: ZendeskMappingQueryRepository,
+  @Autowired val grispiTicketCommentImportService: GrispiTicketCommentImportService
 ) {
 
   private val logger = LoggerFactory.getLogger(javaClass)
@@ -102,8 +103,13 @@ class ZendeskApiController(
   }
 
   @GetMapping("/ticket-forms")
-  fun ticketForms(): MutableList<ZendeskTicketForm>? {
-    return zendeskTicketFormRepository.findAll()
+  fun ticketForms(): TicketRequest {
+    val toTicketRequest = zendeskTicketRepository.findById(116390).get()
+      .toTicketRequest(
+        zendeskMappingQueryRepository::findGrispiUserId,
+        zendeskMappingQueryRepository::findGrispiGroupId,
+        zendeskMappingQueryRepository::findGrispiTicketFormId)
+    return toTicketRequest
   }
 
   @GetMapping("/ticket-status")
