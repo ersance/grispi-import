@@ -50,6 +50,7 @@ class ZendeskFetchService(
         MDC.put("operationId", operationId)
         zendeskOrganizationService.fetch(operationId, zendeskApiCredentials)
         zendeskGroupService.fetch(operationId, zendeskApiCredentials)
+        zendeskGroupService.fetchGroupMemberships(operationId, zendeskApiCredentials)
         zendeskTicketFieldService.fetch(operationId, zendeskApiCredentials)
         zendeskTicketFormService.fetch(operationId, zendeskApiCredentials)
         zendeskUserFieldService.fetch(operationId, zendeskApiCredentials)

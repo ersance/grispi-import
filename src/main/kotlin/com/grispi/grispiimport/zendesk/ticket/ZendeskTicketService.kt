@@ -7,6 +7,7 @@ import com.grispi.grispiimport.zendesk.ZendeskApi.Companion.PAGE_SIZE
 import com.grispi.grispiimport.zendesk.organization.ResourceCount
 import com.grispi.grispiimport.zendesk.organization.ZendeskOrganizationService
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -35,7 +36,7 @@ class ZendeskTicketService(
 
         logger.info("ticket import process is started for ${ticketCount} tickets at: ${LocalDateTime.now()}")
 
-        val combinedTickets: MutableList<CompletableFuture<List<ZendeskTicket>>> = mutableListOf()
+        val combinedTickets: MutableList<CompletableFuture<Void>> = mutableListOf()
 
         val to = BigDecimal(ticketCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt()
         for (index in (startingFrom)!!.rangeTo(to)) {
@@ -60,6 +61,10 @@ class ZendeskTicketService(
                     return@thenApply tickets
                 }
                 .thenApply { tickets -> save(tickets, operationId) }
+                .thenRun {
+                    MDC.put("operationId", operationId)
+                    logger.info("tickets fetched for page: ${index}")
+                }
 
             combinedTickets.add(page)
         }

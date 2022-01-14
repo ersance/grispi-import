@@ -1,6 +1,8 @@
 package com.grispi.grispiimport.zendesk
 
 import com.grispi.grispiimport.zendesk.group.ZendeskGroup
+import com.grispi.grispiimport.zendesk.group.ZendeskGroupMembership
+import com.grispi.grispiimport.zendesk.group.ZendeskGroupMemberships
 import com.grispi.grispiimport.zendesk.group.ZendeskGroups
 import com.grispi.grispiimport.zendesk.organization.ZendeskOrganization
 import com.grispi.grispiimport.zendesk.organization.ZendeskOrganizations
@@ -27,8 +29,7 @@ import kotlin.reflect.KFunction3
 @Service
 class ZendeskApi(
     private val zendeskDateConverter: ZendeskDateConverter,
-    private val apiLimitWatcher: ApiLimitWatcher,
-    private val commentMapRepository: CommentMapRepository
+    private val apiLimitWatcher: ApiLimitWatcher
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -41,6 +42,7 @@ class ZendeskApi(
         const val USER_FIELD_ENDPOINT: String = "/user_fields"
         const val ORGANIZATIONS_ENDPOINT: String = "/organizations"
         const val GROUPS_ENDPOINT: String = "/groups"
+        const val GROUP_MEMBERSHIP_ENDPOINT: String = "/group_memberships"
         const val USERS_ENDPOINT: String = "/users"
         const val DELETED_USERS_ENDPOINT: String = "/deleted_users"
         const val TICKETS_ENDPOINT: String = "/tickets"
@@ -82,8 +84,26 @@ class ZendeskApi(
             .groups
     }
 
+    fun getGroupMemberships(apiCredentials: ZendeskApiCredentials, zendeskPageParams: ZendeskPageParams): List<ZendeskGroupMembership> {
+        val response = HttpRequest
+            .get("https://${apiCredentials.subdomain}.${HOST}${GROUP_MEMBERSHIP_ENDPOINT}")
+            .query("page", zendeskPageParams.page).query("per_page", zendeskPageParams.perPage)
+            .basicAuthentication("${apiCredentials.email}/token", apiCredentials.token)
+            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+            .send()
+
+        return JsonParser()
+            .parse(response.bodyText(), ZendeskGroupMemberships::class.java)
+            .groups
+    }
+
     fun getGroupCount(apiCredentials: ZendeskApiCredentials): Long {
         return getResourceCount("${GROUPS_ENDPOINT}/count", apiCredentials)
+    }
+
+    fun getGroupMembershipCount(apiCredentials: ZendeskApiCredentials): Long {
+        val response = get(GROUP_MEMBERSHIP_ENDPOINT, apiCredentials)
+        return JsonParser().parseAsJsonObject(response.bodyText()).getValue("count")
     }
 
     // TICKET FIELDS
@@ -145,7 +165,6 @@ class ZendeskApi(
         zendeskPageParams: ZendeskPageParams,
         saveUsers: (List<ZendeskUser>, String) -> List<ZendeskUser>?
     ): CompletableFuture<List<ZendeskUser>> {
-        logger.info("getUser() invoked for page: ${zendeskPageParams.page}... ")
         return HttpRequest
             .get("https://${apiCredentials.subdomain}.${HOST}${USERS_ENDPOINT}")
             .query("page", zendeskPageParams.page).query("per_page", zendeskPageParams.perPage)
@@ -238,7 +257,6 @@ class ZendeskApi(
         zendeskPageParams: ZendeskPageParams,
         saveTickets: (List<ZendeskTicket>, String) -> List<ZendeskTicket>
     ): CompletableFuture<List<ZendeskTicket>> {
-        logger.info("getTickets() invoked for page: ${zendeskPageParams.page}...}")
         return HttpRequest
             .get("https://${apiCredentials.subdomain}.${HOST}${TICKETS_ENDPOINT}")
             .query("include", "comment_count")
@@ -284,7 +302,6 @@ class ZendeskApi(
         apiCredentials: ZendeskApiCredentials,
         kFunction3: KFunction3<List<ZendeskComment>, String, Long, List<ZendeskComment>>
     ): CompletableFuture<List<ZendeskComment>> {
-        commentMapRepository.save(CommentMap(ticketId, requested = true))
         return HttpRequest
             .get("https://${apiCredentials.subdomain}.${HOST}${TICKETS_ENDPOINT}/${ticketId}${TICKET_COMMENTS_ENDPOINT}")
             .basicAuthentication("${apiCredentials.email}/token", apiCredentials.token)
@@ -294,7 +311,6 @@ class ZendeskApi(
                 MDC.put("operationId", apiCredentials.operationId)
                 val header = response.header("Retry-After")
                 if (StringUtils.hasText(header)) {
-                    commentMapRepository.save(CommentMap(ticketId, waiting = true))
                     apiLimitWatcher.limitExceededFor(apiCredentials.operationId, header.toLong())
                     scheduledExecutorService.schedule(
                         {
@@ -311,8 +327,6 @@ class ZendeskApi(
 
                     return@thenApply emptyList()
                 }
-
-                commentMapRepository.save(CommentMap(ticketId, fetched = true))
 
                 return@thenApply JsonParser()
                     .withValueConverter("comments.values.createdAt", zendeskDateConverter)

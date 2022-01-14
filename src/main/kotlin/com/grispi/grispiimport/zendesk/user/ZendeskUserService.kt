@@ -63,7 +63,7 @@ class ZendeskUserService(
                 .thenApply { users -> save(users, operationId) }
                 .thenRun {
                     MDC.put("operationId", operationId)
-                    logger.info("users imported for page: ${index}")
+                    logger.info("users fetched for page: ${index}")
                 }
         }
     }

@@ -23,17 +23,18 @@ class GrispiImportService(
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    @CalculateTimeSpent
+//    @CalculateTimeSpent
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
         MDC.put("operationId", operationId)
         logger.info("grispi import started for tenant: {${grispiApiCredentials.tenantId}} with operation id: $operationId")
 
-        organizationService.import(operationId, grispiApiCredentials)
-        groupImportService.import(operationId, grispiApiCredentials)
-        ticketFieldService.import(operationId, grispiApiCredentials)
-        ticketFormService.import(operationId, grispiApiCredentials)
-        userFieldService.import(operationId, grispiApiCredentials)
-        grispiTicketImportService.import(operationId, grispiApiCredentials)
+//        organizationService.import(operationId, grispiApiCredentials)
+//        groupImportService.import(operationId, grispiApiCredentials)
+//        ticketFieldService.import(operationId, grispiApiCredentials)
+//        ticketFormService.import(operationId, grispiApiCredentials)
+//        userFieldService.import(operationId, grispiApiCredentials)
+//        userService.import(operationId, grispiApiCredentials)
+//        grispiTicketImportService.import(operationId, grispiApiCredentials)
         grispiTicketCommentImportService.import(operationId, grispiApiCredentials)
 
         logger.info("grispi import has ended for tenant: {${grispiApiCredentials.tenantId}} with operation id: $operationId")

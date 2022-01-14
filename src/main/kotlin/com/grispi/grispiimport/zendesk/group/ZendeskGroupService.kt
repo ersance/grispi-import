@@ -1,12 +1,9 @@
 package com.grispi.grispiimport.zendesk.group
 
-import com.grispi.grispiimport.grispi.GrispiApi
 import com.grispi.grispiimport.utils.CalculateTimeSpent
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.ZendeskApi.Companion.PAGE_SIZE
 import com.grispi.grispiimport.zendesk.organization.ResourceCount
-import com.grispi.grispiimport.zendesk.organization.ZendeskOrganizationService
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.mongodb.repository.MongoRepository
@@ -15,13 +12,13 @@ import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
-import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
 
 @Service
 class ZendeskGroupService(
     private val zendeskApi: ZendeskApi,
-    private val zendeskGroupRepository: ZendeskGroupRepository
+    private val zendeskGroupRepository: ZendeskGroupRepository,
+    private val zendeskGroupMembershipRepository: ZendeskGroupMembershipRepository
 ) {
 
     companion object {
@@ -39,6 +36,19 @@ class ZendeskGroupService(
             zendeskGroups.forEach { it.operationId = operationId }
 
             zendeskGroupRepository.saveAll(zendeskGroups)
+        }
+    }
+
+    fun fetchGroupMemberships(operationId: String, zendeskApiCredentials: ZendeskApiCredentials) {
+
+        val groupMembershipCount = zendeskApi.getGroupMembershipCount(zendeskApiCredentials)
+
+        for (index in 1..(BigDecimal(groupMembershipCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt())) {
+            val zendeskGroupMemberships = zendeskApi.getGroupMemberships(zendeskApiCredentials, ZendeskPageParams(index, PAGE_SIZE))
+
+            zendeskGroupMemberships.forEach { it.operationId = operationId }
+
+            zendeskGroupMembershipRepository.saveAll(zendeskGroupMemberships)
         }
     }
 
@@ -60,5 +70,11 @@ class ZendeskGroupService(
 @Repository
 interface ZendeskGroupRepository: MongoRepository<ZendeskGroup, Long> {
     fun findAllByOperationId(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskGroup>
+    fun countAllByOperationId(@Param("operationId") operationId: String): Long
+}
+
+@Repository
+interface ZendeskGroupMembershipRepository: MongoRepository<ZendeskGroupMembership, Long> {
+    fun findAllByOperationId(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskGroupMembership>
     fun countAllByOperationId(@Param("operationId") operationId: String): Long
 }

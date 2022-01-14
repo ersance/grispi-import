@@ -3,9 +3,7 @@ package com.grispi.grispiimport.grispi
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.user.ZendeskUserRepository
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -15,10 +13,11 @@ import java.util.concurrent.TimeUnit
 
 @Service
 class GrispiUserImportService(
-    @Autowired val grispiApi: GrispiApi,
-    @Autowired val zendeskMappingRepository: ZendeskMappingRepository,
-    @Autowired val zendeskLogRepository: ZendeskLogRepository,
-    @Autowired val zendeskUserRepository: ZendeskUserRepository
+    private val grispiApi: GrispiApi,
+    private val zendeskMappingRepository: ZendeskMappingRepository,
+    private val zendeskMappingQueryRepository: ZendeskMappingQueryRepository,
+    private val zendeskLogRepository: ZendeskLogRepository,
+    private val zendeskUserRepository: ZendeskUserRepository
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -40,6 +39,7 @@ class GrispiUserImportService(
         logger.info("user import process is started for ${userCount} users at: ${LocalDateTime.now()}")
 
         val combinedUsers: MutableList<CompletableFuture<ImportLog>> = mutableListOf()
+
         val to = BigDecimal(userCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt()
         for (index in 0 until to) {
             var users = zendeskUserRepository.findAllByOperationIdAndActiveTrue(operationId, PageRequest.of(index, PAGE_SIZE))
@@ -47,8 +47,30 @@ class GrispiUserImportService(
             logger.info("fetching {${users.pageable.pageNumber}}. page for {${users.content.count()}} users")
 
             for (user in users.content) {
+
+                val grispiUserRequest = try {
+                    user.toGrispiUserRequest(
+                        zendeskMappingQueryRepository::findGrispiGroupMemberships,
+                        zendeskMappingQueryRepository::findGrispiOrganizationId
+                    )
+                }
+                catch (exception: RuntimeException) {
+                    if (exception is GrispiReferenceNotFoundException) {
+                        zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                            "{${user.name} with id: ${user.id}} couldn't be imported. ${exception.printMessage()}",
+                            operationId))
+                    }
+                    else {
+                        zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                            "{${user.name} with id: ${user.id}} couldn't be imported. ${exception.message}",
+                            operationId))
+                    }
+
+                    continue
+                }
+
                 val userRequest = grispiApi
-                    .createUser(user.toGrispiUserRequest(), grispiApiCredentials)
+                    .createUser(grispiUserRequest, grispiApiCredentials)
                     .thenApply { userId ->
                         zendeskMappingRepository.save(ZendeskMapping(null, user.id, userId, RESOURCE_NAME, operationId))
                         zendeskLogRepository.save(ImportLog(null,
@@ -101,8 +123,30 @@ class GrispiUserImportService(
             logger.info("fetching $index. page")
 
             for (user in users.content) {
+
+                val grispiUserRequest = try {
+                    user.toGrispiUserRequest(
+                        zendeskMappingQueryRepository::findGrispiGroupMemberships,
+                        zendeskMappingQueryRepository::findGrispiOrganizationId
+                    )
+                }
+                catch (exception: RuntimeException) {
+                    if (exception is GrispiReferenceNotFoundException) {
+                        zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                            "{${user.name} with id: ${user.id}} couldn't be imported. ${exception.printMessage()}",
+                            operationId))
+                    }
+                    else {
+                        zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                            "{${user.name} with id: ${user.id}} couldn't be imported. ${exception.message}",
+                            operationId))
+                    }
+
+                    continue
+                }
+
                 val deletedUserRequest = grispiApi
-                    .createDeletedUser(user.toGrispiDeletedUserRequest(), grispiApiCredentials)
+                    .createDeletedUser(grispiUserRequest, grispiApiCredentials)
                     .thenApply { userId ->
                         zendeskMappingRepository.save(ZendeskMapping(null, user.id, userId, RESOURCE_NAME, operationId))
                         zendeskLogRepository.save(ImportLog(null,

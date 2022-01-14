@@ -97,39 +97,52 @@ class GrispiTicketImportService(
             logger.info("fetching {${tickets.pageable.pageNumber}}. page for {${tickets.content.count()}} tickets")
 
             for (ticket in tickets.content) {
-                val ticketRequest = grispiApi.createTicketAsync(ticket.toTicketRequest(
-                    zendeskMappingQueryRepository::findGrispiUserId,
-                    zendeskMappingQueryRepository::findGrispiGroupId,
-                    zendeskMappingQueryRepository::findGrispiTicketFormId),
-                    grispiApiCredentials
-                )
-                .thenApply { ticketKey ->
-                    zendeskMappingRepository.save(ZendeskMapping(null, ticket.id, ticketKey, RESOURCE_NAME, operationId))
-                    zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS, RESOURCE_NAME, "{${ticket.subject}} created successfully", operationId))
+
+                val toTicketRequest = try {
+                    ticket.toTicketRequest(
+                        zendeskMappingQueryRepository::findGrispiUserId,
+                        zendeskMappingQueryRepository::findGrispiGroupId,
+                        zendeskMappingQueryRepository::findGrispiTicketFormId)
                 }
-                .exceptionally { exception ->
-                    when (exception.cause) {
-                        is GrispiApiException -> {
-                            val grispiApiException = exception.cause as GrispiApiException
-                            zendeskLogRepository.save(
-                                ImportLog(null, LogType.ERROR, RESOURCE_NAME,
-                                    "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. status code: ${grispiApiException.statusCode} message: ${grispiApiException.exceptionMessage}",
+                catch (exception: RuntimeException) {
+                    if (exception is GrispiReferenceNotFoundException) {
+                        zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                            "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. ${exception.printMessage()}",
+                            operationId))
+                    }
+                    else {
+                        zendeskLogRepository.save(ImportLog(null, LogType.ERROR,
+                            GrispiUserImportService.RESOURCE_NAME,
+                            "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. ${exception.message}",
+                            operationId))
+                    }
+
+                    continue
+                }
+
+                val ticketRequest = grispiApi
+                    .createTicketAsync(toTicketRequest, grispiApiCredentials)
+                    .thenApply { ticketKey ->
+                        zendeskMappingRepository.save(ZendeskMapping(null, ticket.id, ticketKey, RESOURCE_NAME, operationId))
+                        zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS, RESOURCE_NAME, "{${ticket.subject}} created successfully", operationId))
+                    }
+                    .exceptionally { exception ->
+                        when (exception.cause) {
+                            is GrispiApiException -> {
+                                val grispiApiException = exception.cause as GrispiApiException
+                                zendeskLogRepository.save(
+                                    ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                                        "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. status code: ${grispiApiException.statusCode} message: ${grispiApiException.exceptionMessage}",
+                                        operationId))
+                            }
+                            else -> {
+                                zendeskLogRepository.save(ImportLog(null, LogType.ERROR,
+                                    GrispiUserImportService.RESOURCE_NAME,
+                                    "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. ${exception.message}",
                                     operationId))
-                        }
-                        is GrispiReferenceNotFoundException -> {
-                            val grispiReferenceNotFoundException = exception.cause as GrispiReferenceNotFoundException
-                            zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
-                               "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. ${grispiReferenceNotFoundException.printMessage()}",
-                               operationId))
-                        }
-                        else -> {
-                            zendeskLogRepository.save(ImportLog(null, LogType.ERROR,
-                                GrispiUserImportService.RESOURCE_NAME,
-                                "{${ticket.subject} with id: ${ticket.id}} couldn't be imported. ${exception.message}",
-                                operationId))
+                            }
                         }
                     }
-                }
 
                 ticketRequests.add(ticketRequest)
             }

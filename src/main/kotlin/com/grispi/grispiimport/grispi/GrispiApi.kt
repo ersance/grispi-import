@@ -106,8 +106,8 @@ class GrispiApi {
             }
     }
 
-    fun createDeletedUser(deletedUserRequest: DeletedUserRequest, apiCredentials: GrispiApiCredentials): CompletableFuture<String> {
-        return postAsync(DELETED_USER_ENDPOINT, deletedUserRequest.toJson(), apiCredentials)
+    fun createDeletedUser(userRequest: UserRequest, apiCredentials: GrispiApiCredentials): CompletableFuture<String> {
+        return postAsync(DELETED_USER_ENDPOINT, userRequest.toJson(), apiCredentials)
             .thenApply { response ->
                 if (response.statusCode().equals(HttpStatus.HTTP_CREATED)) {
                     return@thenApply response.bodyText()
@@ -153,6 +153,7 @@ class GrispiApi {
 
     fun createCommentsAsync(commentRequests: List<CommentRequest>?, apiCredentials: GrispiApiCredentials): CompletableFuture<String> {
         val commentRequestJson = JsonSerializer().deep(true).serialize(commentRequests)
+        logger.info("${commentRequests?.size} comments import requesting for ticket ${commentRequests?.first()?.ticketKey}")
         return postAsync("${TICKET_ENDPOINT}/${commentRequests?.first()?.ticketKey}${TICKET_COMMENT_ENDPOINT}", commentRequestJson, apiCredentials)
             .thenApply { response ->
                 if (response.statusCode().equals(HttpStatus.HTTP_CREATED)) {
@@ -202,6 +203,7 @@ class GrispiApi {
 
 }
 
+// TODO: 14.01.2022 add resource id
 class GrispiApiException(
     val statusCode: Int? = null,
     val exceptionMessage: String? = null

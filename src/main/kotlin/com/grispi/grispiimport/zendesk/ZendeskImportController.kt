@@ -4,19 +4,14 @@ import com.grispi.grispiimport.zendesk.organization.ResourceCount
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
 import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
 @RestController
 class ZendeskImportController(
-    @Autowired val zendeskImportService: ZendeskImportService,
-    @Autowired val zendeskImportRepository: ZendeskImportRepository,
-    @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
+    private val zendeskImportService: ZendeskImportService
 ) {
 
     @PostMapping("/import")
@@ -24,28 +19,15 @@ class ZendeskImportController(
 
         MDC.put("tenantId", zendeskImportRequest.grispiApiCredentials.tenantId)
 
-        val zendeskTenantImport = zendeskImportService.import(zendeskImportRequest)
+        val zendeskTenantImport = zendeskImportService.fetchAndImport(zendeskImportRequest)
 
         return ZendeskImportResponse(zendeskTenantImport)
     }
 
-    @PostMapping("/zendesk-import", consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun blog(@RequestBody zendeskImportRequest: ZendeskImportRequest): ZendeskTenantImport {
-
-        MDC.put("tenantId", zendeskImportRequest.grispiApiCredentials.tenantId)
-
-        return zendeskImportService.import(zendeskImportRequest)
-    }
-
-    @GetMapping("/import/{operationId}/status")
-    fun importStatus(@PathVariable operationId: String, @RequestBody zendeskImportRequest: ZendeskImportRequest): ResponseEntity<ZendeskImportStatusResponse> {
-        return ResponseEntity.ok(zendeskImportService.checkStatus(operationId, zendeskImportRequest.zendeskApiCredentials))
-    }
-
     @PostMapping("/fetch")
-    fun fetchById(@RequestBody zendeskImportRequest: ZendeskImportRequest, @RequestParam("operationId") operationId: String?): ResponseEntity<Void> {
+    fun fetchZendeskResources(@RequestBody zendeskImportRequest: ZendeskImportRequest, @RequestParam("operationId") operationId: String?): ResponseEntity<Void> {
         try {
-            zendeskImportService.fetch(operationId, zendeskImportRequest)
+            zendeskImportService.fetchById(operationId, zendeskImportRequest)
         }
         catch (exception: RuntimeException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -54,11 +36,27 @@ class ZendeskImportController(
         return ResponseEntity.ok().build()
     }
 
+    // todo: remove and use importZendeskResources()
+    @PostMapping("/zendesk-import", consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun blog(@RequestBody zendeskImportRequest: ZendeskImportRequest): ZendeskTenantImport {
+
+        MDC.put("tenantId", zendeskImportRequest.grispiApiCredentials.tenantId)
+
+        return zendeskImportService.fetchAndImport(zendeskImportRequest)
+    }
+
+
+
+    @GetMapping("/import/{operationId}/status")
+    fun importStatus(@PathVariable operationId: String, @RequestBody zendeskImportRequest: ZendeskImportRequest): ResponseEntity<ZendeskImportStatusResponse> {
+        return ResponseEntity.ok(zendeskImportService.checkStatus(operationId, zendeskImportRequest.zendeskApiCredentials))
+    }
+
     @PostMapping("/import/{operationId}")
     fun importById(@RequestBody zendeskImportRequest: ZendeskImportRequest, @PathVariable operationId: String): ResponseEntity<Void> {
 
         try {
-            zendeskImportService.import(operationId, zendeskImportRequest)
+            zendeskImportService.importById(operationId, zendeskImportRequest)
         }
         catch (exception: RuntimeException) {
             ResponseEntity.status(HttpStatus.NOT_FOUND)

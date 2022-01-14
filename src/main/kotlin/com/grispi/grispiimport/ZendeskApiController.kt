@@ -13,6 +13,7 @@ import com.grispi.grispiimport.zendesk.ticketform.ZendeskTicketForm
 import com.grispi.grispiimport.zendesk.ticketform.ZendeskTicketFormRepository
 import com.grispi.grispiimport.zendesk.ticketform.ZendeskTicketFormService
 import com.grispi.grispiimport.zendesk.user.ZendeskUserRepository
+import com.grispi.grispiimport.zendesk.user.ZendeskUserService
 import com.grispi.grispiimport.zendesk.userfield.ZendeskUserFieldRepository
 import jodd.http.HttpRequest
 import jodd.json.JsonParser
@@ -47,6 +48,8 @@ class ZendeskApiController(
   @Autowired val zendeskGroupRepository: ZendeskGroupRepository,
   @Autowired val zendeskTicketFieldRepository: ZendeskTicketFieldRepository,
   @Autowired val zendeskUserFieldRepository: ZendeskUserFieldRepository,
+  @Autowired val zendeskUserService: ZendeskUserService,
+  @Autowired val grispiUserService: GrispiUserImportService,
   @Autowired val zendeskUserRepository: ZendeskUserRepository,
   @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
   @Autowired val zendeskTicketCommentRepository: ZendeskTicketCommentRepository,
@@ -92,18 +95,11 @@ class ZendeskApiController(
     logger.info(FINALIZE_SESSION_MARKER, "semiallaaaahulimelhamide. tenant");
   }
 
-  @GetMapping("/deleted-users")
-  fun deletedUsers() {
-    val deletedUserCount = zendeskUserRepository.countAllByOperationIdAndActiveFalse("66a40cc1-3602-4f58-b115-943f1f5754d7")
-
-    val to = BigDecimal(deletedUserCount).divide(BigDecimal(GrispiUserImportService.PAGE_SIZE), RoundingMode.UP).toInt()
-    for (index in 0 until to) {
-      var users = zendeskUserRepository.findAllByOperationIdAndActiveFalse("66a40cc1-3602-4f58-b115-943f1f5754d7", PageRequest.of(index, GrispiUserImportService.PAGE_SIZE))
-    }
-  }
-
   @GetMapping("/ticket-forms")
   fun ticketForms(): TicketRequest {
+
+    val findGrispiGroupMemberships = zendeskMappingQueryRepository.findGrispiGroupMemberships(362415139339)
+
     val toTicketRequest = zendeskTicketRepository.findById(116390).get()
       .toTicketRequest(
         zendeskMappingQueryRepository::findGrispiUserId,

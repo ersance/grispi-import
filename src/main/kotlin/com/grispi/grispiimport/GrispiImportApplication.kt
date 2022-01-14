@@ -21,6 +21,7 @@ class GrispiImportApplication: CommandLineRunner {
 	}
 
 	override fun run(vararg args: String?) {
+		logger.info(System.getProperty("java.version"));
 //		logger.debug("debug log is like that")
 //		logger.info("info log is like that")
 //		logger.warn("warn log is like that")

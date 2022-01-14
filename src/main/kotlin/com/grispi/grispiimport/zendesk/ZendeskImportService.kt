@@ -17,7 +17,7 @@ class ZendeskImportService(
     private val grispiImportService: GrispiImportService
 ) {
 
-    fun import(zendeskImportRequest: ZendeskImportRequest): ZendeskTenantImport {
+    fun fetchAndImport(zendeskImportRequest: ZendeskImportRequest): ZendeskTenantImport {
 
         val resourceCounts = zendeskFetchService.fetchResourceCounts(zendeskImportRequest.zendeskApiCredentials)
 
@@ -32,19 +32,21 @@ class ZendeskImportService(
         return zendeskTenantImport
     }
 
-    fun fetch(operationId: String?, zendeskImportRequest: ZendeskImportRequest) {
+    fun fetchById(operationId: String?, zendeskImportRequest: ZendeskImportRequest) {
 
         val opId: String = operationId ?: createTenantImportOperation(zendeskImportRequest, mapOf()).id
 
         if (zendeskImportRepository.existsById(opId)) {
-            CompletableFuture.supplyAsync { zendeskFetchService.fetchResources(opId, zendeskImportRequest.zendeskApiCredentials) }
+            CompletableFuture
+                .supplyAsync { zendeskFetchService.fetchResources(opId, zendeskImportRequest.zendeskApiCredentials) }
+                .thenRun { grispiImportService.import(opId, zendeskImportRequest.grispiApiCredentials) }
         }
         else {
             throw RuntimeException("operation not found")
         }
     }
 
-    fun import(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
+    fun importById(operationId: String, zendeskImportRequest: ZendeskImportRequest) {
         if (zendeskImportRepository.existsById(operationId)) {
             grispiImportService.import(operationId, zendeskImportRequest.grispiApiCredentials)
         }

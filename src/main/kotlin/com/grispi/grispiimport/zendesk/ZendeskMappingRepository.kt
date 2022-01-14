@@ -1,15 +1,18 @@
 package com.grispi.grispiimport.zendesk
 
 import com.grispi.grispiimport.grispi.*
+import com.grispi.grispiimport.zendesk.group.ZendeskGroupMembership
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.aggregate
 import org.springframework.data.mongodb.core.mapping.Document
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.repository.MongoRepository
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.stereotype.Repository
+import java.util.stream.Collectors
 
 @Repository
 interface ZendeskMappingRepository: MongoRepository<ZendeskMapping, String>
@@ -34,11 +37,28 @@ class ZendeskMappingQueryRepository(
         }
     }
 
+    fun findGrispiOrganizationId(zendeskId: Long): String? {
+        val query = Query()
+        query.addCriteria(Criteria.where("zendeskId").`is`(zendeskId).and("resourceName").`is`(GrispiOrganizationImportService.RESOURCE_NAME))
+        val zendeskMapping = mongoTemplate.findOne(query, ZendeskMapping::class.java)
+        return zendeskMapping?.grispiId
+    }
+
     fun findGrispiGroupId(zendeskId: Long): String? {
         val query = Query()
         query.addCriteria(Criteria.where("zendeskId").`is`(zendeskId).and("resourceName").`is`(GrispiGroupImportService.RESOURCE_NAME))
         val zendeskMapping = mongoTemplate.findOne(query, ZendeskMapping::class.java)
         return zendeskMapping?.grispiId
+    }
+
+    // retrieves zendesk group membership ids for a given zendesk user id
+    fun findGrispiGroupMemberships(zendeskUserId: Long): Set<String> {
+        val memberships = mongoTemplate.find(Query().addCriteria(Criteria.where("userId").`is`(zendeskUserId)), ZendeskGroupMembership::class.java)
+
+        val query = Query()
+        query.addCriteria(Criteria.where("zendeskId").`in`(memberships.map { it.groupId }).and("resourceName").`is`(GrispiGroupImportService.RESOURCE_NAME))
+        val zendeskMapping = mongoTemplate.find(query, ZendeskMapping::class.java)
+        return zendeskMapping.stream().map { it.grispiId }.collect(Collectors.toSet())
     }
 
     fun findGrispiTicketKey(zendeskId: Long): String {

@@ -29,8 +29,29 @@ class ZendeskGroup: ZendeskEntity() {
 }
 
 class ZendeskGroups {
-
     @JSON(name = "groups")
     val groups: List<ZendeskGroup> = emptyList()
+}
+
+class ZendeskGroupMemberships {
+    @JSON(name = "group_memberships")
+    val groups: List<ZendeskGroupMembership> = emptyList()
+}
+
+@Document
+class ZendeskGroupMembership: ZendeskEntity() {
+
+    @Id
+    @JSON(name = "id")
+    var id: Long = -1
+
+    @JSON(name = "user_id")
+    var userId: Long = -1
+
+    @JSON(name = "group_id")
+    var groupId: Long = -1
+
+    @JSON(name = "default")
+    var default: Boolean = false
 
 }

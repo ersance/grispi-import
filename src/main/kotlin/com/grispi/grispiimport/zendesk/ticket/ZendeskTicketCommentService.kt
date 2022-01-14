@@ -3,6 +3,7 @@ package com.grispi.grispiimport.zendesk.ticket
 import com.grispi.grispiimport.zendesk.*
 import com.grispi.grispiimport.zendesk.organization.ResourceCount
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.mongodb.repository.MongoRepository
 import org.springframework.data.repository.query.Param
@@ -35,7 +36,7 @@ class ZendeskTicketCommentService(
 
         logger.info("ticket comment fetch process is started for ${commentedTicketsCount} tickets at: ${LocalDateTime.now()}")
 
-        val combinedCommentRequests: MutableList<CompletableFuture<CommentMap>> = mutableListOf()
+        val combinedCommentRequests: MutableList<CompletableFuture<Void>> = mutableListOf()
 
         val to = BigDecimal(commentedTicketsCount).divide(BigDecimal(PAGE_SIZE), RoundingMode.UP).toInt()
         for (index in (startingFrom)!!.rangeTo(to)) {
@@ -58,9 +59,9 @@ class ZendeskTicketCommentService(
                 val getTicketComments = zendeskApi
                     .getTicketComments(ticket.id, zendeskApiCredentials, this::save)
                     .thenApply { comments -> save(comments, operationId, ticket.id) }
-                    .handle { t, exception ->
-                        exception.printStackTrace()
-                        commentMapRepository.save(CommentMap(ticket.id, exception = exception.stackTraceToString()))
+                    .thenRun {
+                        MDC.put("operationId", operationId)
+                        logger.info("comments fetched for page: ${index}")
                     }
 
                 combinedCommentRequests.add(getTicketComments)
@@ -68,7 +69,6 @@ class ZendeskTicketCommentService(
 
             logger.info("ticket comments fetched for page: ${index}")
         }
-
 
         CompletableFuture.allOf(*combinedCommentRequests.toTypedArray()).get(1, TimeUnit.DAYS)
 

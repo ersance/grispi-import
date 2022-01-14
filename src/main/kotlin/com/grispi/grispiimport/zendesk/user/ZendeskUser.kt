@@ -34,10 +34,16 @@ class ZendeskUser: ZendeskEntity() {
     @JSON(name = "external_id")
     var externalId: String? = null
 
+    @JSON(name = "default_group_id")
+    var defaultGroupId: Long? = null
+
+    @JSON(name = "organization_id")
+    var organizationId: Long? = null
+
     @JSON(name = "user_fields")
     var userFields: Map<String, String> = mapOf()
 
-    fun toGrispiUserRequest(): UserRequest {
+    fun toGrispiUserRequest(findGrispiGroupIds: (Long) -> Set<String>?, findGrispiOrganizationId: (Long) -> String?): UserRequest {
         val userFieldSet = mutableSetOf<TicketRequest.FieldFromUi_>()
         if (PhoneNumberValidator.isValid(phone.toString())) {
             userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_PHONE_USER_FIELD_KEY, phone))
@@ -46,28 +52,24 @@ class ZendeskUser: ZendeskEntity() {
             userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_EXTERNAL_ID_USER_FIELD_KEY, externalId))
         }
 
+        val groups = if (defaultGroupId != null) {
+            findGrispiGroupIds.invoke(id)!!.stream().map { it.toLong() }.collect(Collectors.toSet())
+        } else null
+
+        val organizationId = if (organizationId != null) findGrispiOrganizationId.invoke(organizationId!!)?.toLong() else null
+
         userFields.map { TicketRequest.FieldFromUi_("uiz.${it.key}", it.value) }.toCollection(userFieldSet)
 
         return UserRequest.Builder()
             .email(email ?: generateEmail())
-            .password(User.NO_PASSWORD)
             .fullName(name.toString())
             .phone(if (PhoneNumberValidator.isValid(phone.toString())) phone else "null")
             .role(mapRole())
             .tags(tags)
             .tags("zendesk-import")
+            .groups(groups)
+            .organizationId(organizationId)
             .fields(userFieldSet)
-            .build()
-    }
-
-    fun toGrispiDeletedUserRequest(): DeletedUserRequest {
-        return DeletedUserRequest.DeletedUserBuilder()
-            .externalId(id.toString())
-            .fullName(name.toString())
-            .role(mapRole())
-            .tags(tags)
-            .tags("zendesk-import")
-            .fields(userFields.map { TicketRequest.FieldFromUi_("uiz.${it.key}", it.value) }.toSet())
             .build()
     }
 
