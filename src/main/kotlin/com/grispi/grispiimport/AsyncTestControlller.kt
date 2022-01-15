@@ -68,6 +68,13 @@ class AsyncTestController(
 
         for (ticket in groupedComments.entries) {
 
+            val toList = ticket.value.stream()
+                .map {
+                    it.toCommentRequest(zendeskMappingQueryRepository::findGrispiTicketKey,
+                        zendeskMappingQueryRepository::findGrispiUserId)
+                }
+                .toList()
+
             val thenApply = HttpRequest
                 .post("${GrispiApi.HOST}${GrispiApi.TICKET_ENDPOINT}/TICKET-45471${GrispiApi.TICKET_COMMENT_ENDPOINT}")
                 .bodyText("", "")
@@ -76,7 +83,7 @@ class AsyncTestController(
                 .header(GrispiApi.TENANT_ID_HEADER_NAME, grispiApiCredentials.tenantId)
                 .timeout(10000)
                 .sendAsync()
-                .thenApply { response -> logger.info("response: ${response.bodyText()}") }
+                .thenApply { response -> logger.info("response: ${response.bodyText()} operation: $operationId") }
 
             logger.info("${ticket.key} is requested")
 
