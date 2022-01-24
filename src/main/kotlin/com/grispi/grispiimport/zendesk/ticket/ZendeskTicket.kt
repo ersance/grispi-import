@@ -1,6 +1,7 @@
 package com.grispi.grispiimport.zendesk
 
 import com.grispi.grispiimport.grispi.*
+import com.grispi.grispiimport.zendesk.ticket.GrispiMappings
 import com.grispi.grispiimport.zendesk.ticket.ZendeskCustomField
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketChannel
 import com.vdurmont.emoji.EmojiParser
@@ -87,8 +88,6 @@ class ZendeskTicket: ZendeskEntity() {
     @JSON(name = "custom_fields")
     var fields: MutableList<ZendeskCustomField> = mutableListOf()
 
-    // TODO: 27.11.2021 comment - creator(email)
-    // TODO: 30.11.2021 Creator & requester cannot be null and the users for them should be imported
     fun toTicketRequest(
         getGrispiUserId: KFunction1<Long, String>,
         getGrispiGroupId: KFunction1<Long, String?>,
@@ -108,16 +107,10 @@ class ZendeskTicket: ZendeskEntity() {
         val grispiCreatorId = getGrispiUserId(submitterId)
         val grispiRequesterId = getGrispiUserId(requesterId)
 
-        val subjectSafe = if (StringUtils.isBlank(subject.toString())) {
-            description.subSequence(0, 50).toString()
-        } else {
-            subject.toString()
-        }
-
         return TicketRequest.Builder()
             .channel(channel.toGrispiChannel())
             .formId(getGrispiTicketFormId.invoke(ticketFormId).toLong())
-            .subject(subjectSafe)
+            .subject(subject.toString())
             .creator(grispiCreatorId,"null", "null")
             .requester(grispiRequesterId,"null", "null")
             .assignee(grispiGroupId, grispiAssigneeId.toString())
@@ -128,6 +121,36 @@ class ZendeskTicket: ZendeskEntity() {
             .followers(grispiFollowerIds)
             .emailCcs(grispiEmailCcIds)
             .comment(TicketRequest.Comment_(EmojiParser.parseToAliases(description), true, grispiCreatorId, createdAt))
+            .customField(GrispiTicketFieldRequest.Builder.ZENDESK_ID_CUSTOM_FIELD, id.toString())
+            .customField(GrispiTicketFieldRequest.Builder.ZENDESK_BRAND_ID_CUSTOM_FIELD, brandId.toString())
+            .customField(fields.stream()
+                .filter { field -> field.value != null }
+                .collect(Collectors.toMap(ZendeskCustomField::toGrispiKey, ZendeskCustomField::value))
+            )
+            .build()
+    }
+
+    fun toTicketRequest(grispiMappings: GrispiMappings): TicketRequest {
+        val subjectSafe = if (StringUtils.isBlank(subject.toString())) {
+            description.subSequence(0, 50).toString()
+        } else {
+            subject.toString()
+        }
+
+        return TicketRequest.Builder()
+            .channel(channel.toGrispiChannel())
+            .formId(grispiMappings.grispiTicketFormId)
+            .subject(subjectSafe)
+            .creator(grispiMappings.grispiSubmitterId.toString(),"null", "null")
+            .requester(grispiMappings.grispiRequesterId.toString(),"null", "null")
+            .assignee(grispiMappings.grispiGroupId?.toString(), grispiMappings.grispiAssigneeId?.toString())
+            .status(mapStatus())
+            .tags(tags)
+            .type(mapType())
+            .priority(mapPriority())
+            .followers(grispiMappings.grispiFollowerIds)
+            .emailCcs(grispiMappings.grispiEmailCcIds)
+            .comment(TicketRequest.Comment_(EmojiParser.parseToAliases(description), true, grispiMappings.grispiSubmitterId.toString(), createdAt))
             .customField(GrispiTicketFieldRequest.Builder.ZENDESK_ID_CUSTOM_FIELD, id.toString())
             .customField(GrispiTicketFieldRequest.Builder.ZENDESK_BRAND_ID_CUSTOM_FIELD, brandId.toString())
             .customField(fields.stream()

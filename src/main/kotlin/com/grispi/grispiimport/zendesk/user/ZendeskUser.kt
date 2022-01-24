@@ -43,7 +43,7 @@ class ZendeskUser: ZendeskEntity() {
     @JSON(name = "user_fields")
     var userFields: Map<String, String> = mapOf()
 
-    fun toGrispiUserRequest(findGrispiGroupIds: (Long) -> Set<String>?, findGrispiOrganizationId: (Long) -> String?): UserRequest {
+    fun toGrispiUserRequest(grispiGroupIds: Set<Long>?, grispiOrganizationId: Long?): UserRequest {
         val userFieldSet = mutableSetOf<TicketRequest.FieldFromUi_>()
         if (PhoneNumberValidator.isValid(phone.toString())) {
             userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_PHONE_USER_FIELD_KEY, phone))
@@ -51,12 +51,6 @@ class ZendeskUser: ZendeskEntity() {
         if (externalId != null) {
             userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_EXTERNAL_ID_USER_FIELD_KEY, externalId))
         }
-
-        val groups = if (defaultGroupId != null) {
-            findGrispiGroupIds.invoke(id)!!.stream().map { it.toLong() }.collect(Collectors.toSet())
-        } else null
-
-        val organizationId = if (organizationId != null) findGrispiOrganizationId.invoke(organizationId!!)?.toLong() else null
 
         userFields.map { TicketRequest.FieldFromUi_("uiz.${it.key}", it.value) }.toCollection(userFieldSet)
 
@@ -67,8 +61,8 @@ class ZendeskUser: ZendeskEntity() {
             .role(mapRole())
             .tags(tags)
             .tags("zendesk-import")
-            .groups(groups)
-            .organizationId(organizationId)
+            .groups(grispiGroupIds)
+            .organizationId(grispiOrganizationId)
             .fields(userFieldSet)
             .build()
     }

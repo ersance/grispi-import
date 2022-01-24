@@ -111,9 +111,6 @@ class ZendeskTicketCommentService(
 @Repository
 interface ZendeskTicketCommentRepository: MongoRepository<ZendeskComment, Long> {
 
-//    @Aggregation("{'\$match': {'operationId': ?0}, {'\$group': {'_id': '\$ticketId', 'comments': { '\$push: '\$\$ROOT' } }}")
-//    fun findAllByOperationId(@Param("operationId") operationId: String, pageable: Pageable): Page<ZendeskComment>
-
     fun findAllByOperationIdAndTicketIdIsIn(@Param("operationId") operationId: String, @Param("ticketIds") ticketIds: List<Long>): List<ZendeskComment>
 
     fun countAllByOperationId(operationId: String): Long

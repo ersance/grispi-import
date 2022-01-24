@@ -2,11 +2,11 @@ package com.grispi.grispiimport.grispi
 
 import com.grispi.grispiimport.utils.CalculateTimeSpent
 import com.grispi.grispiimport.zendesk.*
+import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketCommentAggregationRepository
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketCommentRepository
 import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -21,6 +21,7 @@ class GrispiTicketCommentImportService(
     @Autowired val zendeskLogRepository: ZendeskLogRepository,
     @Autowired val zendeskTicketCommentRepository: ZendeskTicketCommentRepository,
     @Autowired val zendeskTicketRepository: ZendeskTicketRepository,
+    @Autowired val zendeskTicketCommentAggregationRepository: ZendeskTicketCommentAggregationRepository,
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -30,41 +31,19 @@ class GrispiTicketCommentImportService(
         const val PAGE_SIZE = 1000
     }
 
-//    @CalculateTimeSpent
+    @CalculateTimeSpent
     fun import(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
-        val commentedTicketIds = zendeskTicketRepository.findCommentedTicketIds(operationId)
 
-        val groupedComments = zendeskTicketCommentRepository
-            .findAllByOperationIdAndTicketIdIsIn(operationId, commentedTicketIds.stream().map { it.id }.toList())
-            .groupBy { it.ticketId }
+        val commentedTickets = zendeskTicketCommentAggregationRepository.findCommentedTickets(operationId)
 
-        val commentRequests: MutableList<CompletableFuture<ImportLog>> = mutableListOf()
+        logger.info("ticket comment import process is started for ${commentedTickets.count()} tickets at: ${LocalDateTime.now()}")
 
-        logger.info("ticket comment import process is started for ${groupedComments.count()} tickets at: ${LocalDateTime.now()}")
-        for (ticket in groupedComments.entries) {
+        val asyncCommentRequests: MutableList<CompletableFuture<ImportLog>> = mutableListOf()
 
-            val comments = try {
-                ticket.value.stream()
-                        .map { it.toCommentRequest(zendeskMappingQueryRepository::findGrispiTicketKey, zendeskMappingQueryRepository::findGrispiUserId) }
-                        .toList()
-            }
-            catch (exception: RuntimeException) {
-                if (exception is GrispiReferenceNotFoundException) {
-                    zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
-                        "{comments with ticket id: ${ticket.key}} couldn't be imported. ${exception.printMessage()}",
-                        operationId))
-                }
-                else {
-                    zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
-                        "comments for ticket with id: {${ticket.key}} couldn't be imported. ${exception.message}",
-                        operationId))
-                }
+        for (ticket in commentedTickets) {
 
-                continue
-            }
-
-            val commentRequest = grispiApi
-                .createCommentsAsync(comments, grispiApiCredentials)
+            val asyncCommentRequest = grispiApi
+                .createCommentsAsync(ticket.comments.map { it.toCommentRequest() }, grispiApiCredentials)
                 .thenApply { response ->
                     zendeskLogRepository.save(
                         ImportLog(null, LogType.SUCCESS, RESOURCE_NAME,
@@ -78,7 +57,7 @@ class GrispiTicketCommentImportService(
                             val grispiApiException = exception.cause as GrispiApiException
                             zendeskLogRepository.save(
                                 ImportLog(null, LogType.ERROR, RESOURCE_NAME,
-                                    "comments for ticket with id: {NOT_IMPLEMENTED!} couldn't be imported. status code: ${grispiApiException.statusCode} message: ${grispiApiException.exceptionMessage}",
+                                    "comments for ticket with id: {${ticket.ticketKey}} couldn't be imported. status code: ${grispiApiException.statusCode} message: ${grispiApiException.exceptionMessage}",
                                     operationId))
                         }
                         else -> {
@@ -88,57 +67,12 @@ class GrispiTicketCommentImportService(
                     }
                 }
 
-            logger.info("${ticket.key} comp future....")
+            logger.info("comments requested for ticket: ${ticket.ticketKey}")
 
-            commentRequests.add(commentRequest)
+            asyncCommentRequests.add(asyncCommentRequest)
         }
-        CompletableFuture.allOf(*commentRequests.toTypedArray()).get(1, TimeUnit.DAYS)
+        CompletableFuture.allOf(*asyncCommentRequests.toTypedArray()).get(1, TimeUnit.DAYS)
 
-        logger.info("ticket comment import process has ended for ${groupedComments.count()} tickets at: ${LocalDateTime.now()}")
+        logger.info("ticket comment import process has ended for ${commentedTickets.count()} tickets at: ${LocalDateTime.now()}")
     }
-
-    fun importForBrand(operationId: String, grispiApiCredentials: GrispiApiCredentials) {
-        val commentedTicketIds = zendeskTicketRepository.findCommentedTicketIds(operationId)
-
-        val groupedComments = zendeskTicketCommentRepository
-            .findAllByOperationIdAndTicketIdIsIn(operationId, commentedTicketIds.stream().map { it.id }.toList())
-            .groupBy { it.ticketId }
-
-        val commentRequests: MutableList<CompletableFuture<ImportLog>> = mutableListOf()
-
-        logger.info("ticket comment import process is started for ${groupedComments.count()} tickets at: ${LocalDateTime.now()}")
-        for (ticket in groupedComments.entries) {
-            try {
-                val comments = ticket.value.stream()
-                    .map { it.toCommentRequest(zendeskMappingQueryRepository::findGrispiTicketKey, zendeskMappingQueryRepository::findGrispiUserId) }
-                    .toList()
-
-                grispiApi.createComments(comments, grispiApiCredentials)
-
-                zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS, RESOURCE_NAME, "comments for ticket with id:{${ticket.key}} created successfully", operationId))
-            } catch (exception: RuntimeException) {
-                when (exception) {
-                    is GrispiApiException -> {
-                        zendeskLogRepository.save(
-                            ImportLog(null, LogType.ERROR, RESOURCE_NAME,
-                                "comments for ticket with id: {${ticket.key}} couldn't be imported. status code: ${exception.statusCode} message: ${exception.exceptionMessage}",
-                                operationId))
-                    }
-                    is GrispiReferenceNotFoundException -> {
-                        zendeskLogRepository.save(ImportLog(null, LogType.ERROR,
-                            GrispiTicketImportService.RESOURCE_NAME,
-                            "{${ticket.key}} comments couldn't be imported. ${exception.printMessage()}",
-                            operationId))
-                    }
-                    else -> {
-                        zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
-                            "comments for ticket with id: {${ticket.key}} couldn't be imported. ${exception.message}",
-                            operationId))
-                    }
-                }
-            }
-        }
-        logger.info("ticket comment import process has ended for ${groupedComments.count()} tickets at: ${LocalDateTime.now()}")
-    }
-
 }

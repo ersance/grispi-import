@@ -39,7 +39,6 @@ class ZendeskImportService(
         if (zendeskImportRepository.existsById(opId)) {
             CompletableFuture
                 .supplyAsync { zendeskFetchService.fetchResources(opId, zendeskImportRequest.zendeskApiCredentials) }
-                .thenRun { grispiImportService.import(opId, zendeskImportRequest.grispiApiCredentials) }
         }
         else {
             throw RuntimeException("operation not found")
