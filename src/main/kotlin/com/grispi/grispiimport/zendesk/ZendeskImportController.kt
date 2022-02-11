@@ -1,64 +1,71 @@
 package com.grispi.grispiimport.zendesk
 
-import com.grispi.grispiimport.common.ImportLogContainer
-import com.grispi.grispiimport.common.ImportLogDao
-import com.grispi.grispiimport.grispi.GrispiUserFieldRequest
+import com.grispi.grispiimport.zendesk.organization.ResourceCount
+import com.grispi.grispiimport.zendesk.ticket.ZendeskTicketRepository
+import org.slf4j.MDC
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
-import java.util.*
 
 @RestController
 class ZendeskImportController(
-    @Autowired val organizationImportService: OrganizationImportService,
-    @Autowired val groupImportService: GroupImportService,
-    @Autowired val ticketFieldImportService: TicketFieldImportService,
-    @Autowired val userFieldImportService: UserFieldImportService,
-    @Autowired val userImportService: UserImportService,
-    @Autowired val ticketImportService: TicketImportService,
-    @Autowired val ticketCommentImportService: TicketCommentImportService,
-    @Autowired val importLogDao: ImportLogDao,
-    @Autowired val zendeskMappingDao: ZendeskMappingDao
+    private val zendeskImportService: ZendeskImportService
 ) {
 
     @PostMapping("/import")
     fun importZendeskResources(@RequestBody zendeskImportRequest: ZendeskImportRequest): ZendeskImportResponse {
 
-        val operationId = "op_id"
+        MDC.put("tenantId", zendeskImportRequest.grispiApiCredentials.tenantId)
 
-//        zendeskMappingDao.initializeTenant(operationId, zendeskImportRequest.grispiApiCredentials.tenantId)
-//
-//        organizationImportService.import(operationId, zendeskImportRequest)
-//
-//        groupImportService.import(operationId, zendeskImportRequest)
-//
-//        ticketFieldImportService.import(operationId, zendeskImportRequest)
-//
-//        userFieldImportService.import(operationId, zendeskImportRequest)
-//
-//        userImportService.import(operationId, zendeskImportRequest)
+        val zendeskTenantImport = zendeskImportService.fetchAndImport(zendeskImportRequest)
 
-//        ticketImportService.import(operationId, zendeskImportRequest)
-
-//        ticketCommentImportService.import(operationId, zendeskImportRequest)
-
-        return ZendeskImportResponse(operationId, zendeskMappingDao.getAllLogs(operationId))
+        return ZendeskImportResponse(zendeskTenantImport)
     }
 
-    @GetMapping("/{tenantId}/imports")
-    fun tenantImports(@PathVariable tenantId: String): Map<String, Any> {
-        return zendeskMappingDao.findByTenantId(tenantId)
+    @PostMapping("/fetch")
+    fun fetchZendeskResources(@RequestBody zendeskImportRequest: ZendeskImportRequest, @RequestParam("operationId") operationId: String?): ResponseEntity<Void> {
+        try {
+            zendeskImportService.fetchById(operationId, zendeskImportRequest)
+        }
+        catch (exception: RuntimeException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+        }
+
+        return ResponseEntity.ok().build()
     }
 
-    @GetMapping("/{tenantId}/import-logs")
-    fun importLogs(@PathVariable tenantId: String): ImportLogContainer {
-        return zendeskMappingDao.getAllLogsByTenant(tenantId)
+    // todo: remove and use importZendeskResources()
+    @PostMapping("/zendesk-import", consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun blog(@RequestBody zendeskImportRequest: ZendeskImportRequest): ZendeskTenantImport {
+
+        MDC.put("tenantId", zendeskImportRequest.grispiApiCredentials.tenantId)
+
+        return zendeskImportService.fetchAndImport(zendeskImportRequest)
     }
 
-    @GetMapping("/import-logs")
-    fun importLogsByOperationId(@RequestParam("operation-id") operationId: String): ImportLogContainer {
-        return zendeskMappingDao.getAllLogs(operationId)
+
+
+    @GetMapping("/import/{operationId}/status")
+    fun importStatus(@PathVariable operationId: String, @RequestBody zendeskImportRequest: ZendeskImportRequest): ResponseEntity<ZendeskImportStatusResponse> {
+        return ResponseEntity.ok(zendeskImportService.checkStatus(operationId, zendeskImportRequest.zendeskApiCredentials))
+    }
+
+    @PostMapping("/import/{operationId}")
+    fun importById(@RequestBody zendeskImportRequest: ZendeskImportRequest, @PathVariable operationId: String): ResponseEntity<Void> {
+
+        try {
+            zendeskImportService.importById(operationId, zendeskImportRequest)
+        }
+        catch (exception: RuntimeException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND)
+        }
+
+        return ResponseEntity.ok().build()
     }
 
 }
 
-data class ZendeskImportResponse(val operationId: String, val logs: ImportLogContainer)
+data class ZendeskImportResponse(val zendeskTenantImport: ZendeskTenantImport)
+data class ZendeskImportStatusResponse(val grispiTenantId: String, val zendeskTenantId: String, val createdAt: Long, val resources: List<ResourceCount>)

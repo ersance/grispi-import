@@ -17,16 +17,23 @@ repositories {
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
-	implementation("redis.clients:jedis:3.6.3")
+	implementation("org.springframework:spring-aop:5.3.14")
+	implementation("org.springframework:spring-aspects:5.3.13")
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
+	implementation("org.springframework.boot:spring-boot-starter-data-mongodb")
+	implementation("org.springframework.boot:spring-boot-starter-mustache")
+	runtimeOnly("org.springframework.boot:spring-boot-devtools")
 	implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+	implementation("org.apache.commons:commons-lang3:3.12.0")
+	implementation("redis.clients:jedis:3.6.3")
+	runtimeOnly("ch.qos.logback:logback-classic")
+	implementation("org.jodd:jodd-json:6.0.3")
+	implementation("org.jodd:jodd-http:6.0.6")
+	implementation("com.googlecode.libphonenumber:libphonenumber:8.12.25")
+	implementation("com.vdurmont:emoji-java:5.1.1")
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-	implementation("org.jodd:jodd-json:6.0.3")
-	implementation("com.vdurmont:emoji-java:5.1.1")
-	implementation("com.googlecode.libphonenumber:libphonenumber:8.12.25")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	implementation("org.jodd:jodd-http:6.0.6")
 }
 
 tasks.withType<KotlinCompile> {

@@ -37,6 +37,33 @@ class GrispiUserFieldRequest(
             return GrispiUserFieldRequest(key, name, type, description, descriptionForAgents, titleForAgents, order, attributes, options)
         }
 
+        fun buildPhoneNumberField(): GrispiUserFieldRequest {
+            return GrispiUserFieldRequest(
+                ZENDESK_PHONE_USER_FIELD_KEY,
+                "zendeskPhone",
+                FieldType.TEXT,
+                "zendesk phone number",
+                "zendesk phone number",
+                "zendesk phone number",
+                null, emptyList(), null)
+        }
+
+        fun buildExternalId(): GrispiUserFieldRequest {
+            return GrispiUserFieldRequest(
+                ZENDESK_EXTERNAL_ID_USER_FIELD_KEY,
+                "zendeskExternalId",
+                FieldType.TEXT,
+                "zendesk external id",
+                "zendesk external id",
+                "zendesk external id",
+                null, emptyList(), null)
+        }
+
+        companion object {
+            const val ZENDESK_PHONE_USER_FIELD_KEY = "uizg.phone"
+            const val ZENDESK_EXTERNAL_ID_USER_FIELD_KEY = "uizg.external_id"
+        }
+
     }
 
 }
