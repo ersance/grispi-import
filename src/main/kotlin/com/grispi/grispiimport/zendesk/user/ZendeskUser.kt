@@ -51,6 +51,7 @@ class ZendeskUser: ZendeskEntity() {
         if (externalId != null) {
             userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_EXTERNAL_ID_USER_FIELD_KEY, externalId))
         }
+        userFieldSet.add(TicketRequest.FieldFromUi_(GrispiUserFieldRequest.Builder.ZENDESK_ID_USER_FIELD_KEY, id.toString()))
 
         userFields.map { TicketRequest.FieldFromUi_("uiz.${it.key}", it.value) }.toCollection(userFieldSet)
 

@@ -7,6 +7,7 @@ import jodd.json.JsonException
 import jodd.json.JsonParser
 import jodd.json.JsonSerializer
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
@@ -18,8 +19,10 @@ class GrispiApi {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
+    @Value("\${grispi.host}")
+    lateinit var HOST: String
+
     companion object {
-        const val HOST: String = "http://grispi.com:8080"
         const val TENANT_ID_HEADER_NAME: String = "tenantId"
 
         const val ORGANIZATIONS_ENDPOINT: String = "/import/organizations"

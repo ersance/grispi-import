@@ -80,6 +80,16 @@ class GrispiUserFieldImportService(
                     "zendesk external id user field couldn't be imported. message: ${exception.message}", operationId))
         }
 
+        // create zendesk id user field
+        try {
+            grispiApi.createUserField(GrispiUserFieldRequest.Builder().buildZendeskId(), grispiApiCredentials)
+
+            zendeskLogRepository.save(ImportLog(null, LogType.SUCCESS, RESOURCE_NAME, "zendesk id user field created successfully", operationId))
+        } catch (exception: RuntimeException) {
+            zendeskLogRepository.save(ImportLog(null, LogType.ERROR, RESOURCE_NAME,
+                    "zendesk id user field couldn't be imported. message: ${exception.message}", operationId))
+        }
+
         logger.info("user field import process has ended for ${userFields.totalElements} user field at: ${LocalDateTime.now()}")
     }
 
