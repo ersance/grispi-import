@@ -59,9 +59,21 @@ class GrispiUserFieldRequest(
                 null, emptyList(), null)
         }
 
+        fun buildZendeskId(): GrispiUserFieldRequest {
+            return GrispiUserFieldRequest(
+                ZENDESK_ID_USER_FIELD_KEY,
+                "zendeskId",
+                FieldType.TEXT,
+                "zendesk id",
+                "zendesk id",
+                "zendesk id",
+                null, emptyList(), null)
+        }
+
         companion object {
             const val ZENDESK_PHONE_USER_FIELD_KEY = "uizg.phone"
             const val ZENDESK_EXTERNAL_ID_USER_FIELD_KEY = "uizg.external_id"
+            const val ZENDESK_ID_USER_FIELD_KEY = "uizg.zendesk_id"
         }
 
     }
